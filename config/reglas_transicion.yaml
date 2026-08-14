@@ -1,0 +1,229 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Reglas de transicion — POLITICA CLINICA, NO CODIGO
+#
+# Este archivo se edita sin tocar el sistema. Un medico del INSN puede cambiar
+# un peso aqui y la priorizacion cambia sin recompilar nada.
+#
+# REGLA DEL PROYECTO: cada umbral lleva su fuente. Si no tiene fuente, lleva
+# TODO y esta marcado como provisional.
+# ─────────────────────────────────────────────────────────────────────────────
+
+version: "0.1.0-provisional"
+fecha_revision: "2026-08-14"
+
+# ═════════════════════════════════════════════════════════════════════════════
+# INDICE DE URGENCIA DE TRANSICION (IUT)
+#   IUT = sigmoide(beta_0 + suma_i beta_i * x_i)
+# ═════════════════════════════════════════════════════════════════════════════
+iut:
+  # ── Intercepto ────────────────────────────────────────────────────────────
+  # PROVISIONAL. Elegido para que un paciente sin ningun factor de riesgo
+  # (todos los x_i = 0) caiga en sigmoide(-4.0) = 0.0180, es decir, cerca de
+  # cero pero no exactamente cero. Un paciente de la cohorte nunca tiene
+  # urgencia nula: por definicion ya esta dentro de la ventana de corte.
+  # TODO: confirmar con mentor — calibrar contra la cohorte historica del INSN.
+  beta_0: -4.0
+
+  # ── Pesos de los ocho factores ────────────────────────────────────────────
+  # PROVISIONAL en su totalidad. PLAN_TECNICO §6.2 declara que los beta los
+  # define un medico del INSN. Los valores de abajo son un punto de partida
+  # razonado, NO una calibracion.
+  #
+  # Suman exactamente 10.0 a proposito: con beta_0 = -4.0, el rango de z es
+  # [-4.0, +6.0], o sea IUT en [0.0180, 0.9975]. Rango util y numeros redondos
+  # que permiten verificar la aritmetica a mano en papel (criterio de
+  # aceptacion del bloque 3).
+  # TODO: confirmar con mentor — pesos beta por diagnostico y por factor.
+  betas:
+    # x1 domina a proposito: el corte a los 18 es duro y en fecha exacta.
+    # Ningun otro factor puede compensar que se acabe el tiempo.
+    x1_urgencia_temporal: 3.0
+    x2_complejidad: 1.2
+    x3_severidad: 1.5
+    x4_dependencia_tecnologica: 1.0
+    x5_brecha_preparacion: 1.0
+    x6_riesgo_perdida: 0.8
+    x7_barrera_acceso: 0.6
+    x8_continuidad_seguro: 0.9
+
+  # ── Parametros de normalizacion de cada factor ────────────────────────────
+  normalizacion:
+    # x1: clamp(1 - t_r/48, 0, 1) con t_r = meses hasta el cumpleanos 18.
+    # 48 meses = 4 anios. La cohorte activa arranca a los 14 (PLAN_TECNICO §1),
+    # o sea exactamente 48 meses antes del corte. A los 14 x1 = 0; a los 18
+    # x1 = 1 y el paciente sale de la cohorte activa.
+    x1_horizonte_meses: 48
+
+    # ─────────────────────────────────────────────────────────────────────
+    # x2 y x3 miden cosas DISTINTAS a proposito.
+    #
+    #   x2 -> extension:  ¿cuantos sistemas estan comprometidos?
+    #   x3 -> gravedad:   ¿que tan grave es lo peor que tiene?
+    #
+    # Antes x2 contaba diagnosticos y x3 sumaba severidades sobre esos mismos
+    # diagnosticos: los dos crecian con el numero de codigos, de modo que un
+    # paciente con tres diagnosticos cardiovasculares aparecia con dos motivos
+    # de riesgo en el desglose cuando en realidad tenia uno contado dos veces.
+    # El desglose es el producto: presentar la misma senal como dos razones
+    # rompe la explicabilidad, que es nuestro diferenciador frente a un modelo
+    # opaco.
+    # ─────────────────────────────────────────────────────────────────────
+
+    # x2: min(C/5, 1) con C = numero de CATEGORIAS CCC v2 distintas entre los
+    # diagnosticos cronicos activos. Tres codigos cardiovasculares son un
+    # sistema, no tres.
+    # El 5 sale de las casillas de diagnostico secundario de la historia
+    # clinica del INSN (formato RD N° 000109-2021-DG-INSN-SB): mas de cinco
+    # sistemas no caben ni en el propio formulario de la institucion.
+    # TODO: confirmar con mentor — si el techo de sistemas comprometidos debe
+    # ser menor que el de casillas de registro.
+    x2_categorias_techo: 5
+
+    # x3: severidad MAXIMA entre los diagnosticos cronicos activos / 3.
+    # El 3 no es un numero elegido: es el tope de la escala de severidad
+    # definida mas abajo (1 cronica, 2 compleja, 3 amenaza vital). Un paciente
+    # con una condicion severa y dos leves es un paciente severo.
+    x3_severidad_maxima: 3
+
+    # x4: suma de pesos de dispositivos / techo.
+    # Techo = 6 = dos dispositivos mayores (peso 3), p.ej. traqueostomia +
+    # ventilacion mecanica. PROVISIONAL.
+    x4_peso_maximo: 6.0
+
+    # x5: (5 - TRAQ)/4. El TRAQ (Transition Readiness Assessment
+    # Questionnaire, version espanola validada) puntua de 1.0 a 5.0.
+    # Sin TRAQ se imputa 0.5 Y se marca dato_faltante=True — PLAN_TECNICO §6.2.
+    x5_traq_minimo: 1.0
+    x5_traq_maximo: 5.0
+    x5_imputacion_sin_dato: 0.5
+
+    # x6: clamp(delta / (2*theta), 0, 1) con delta = dias desde la ultima
+    # consulta y theta = intervalo esperado de control.
+    # theta = 180 dias: control semestral es lo habitual en cronicos
+    # estables. A los 360 dias (2*theta) el factor satura: un anio sin
+    # consulta es perdida de seguimiento, no un retraso.
+    # TODO: confirmar con mentor — intervalo de control real por servicio.
+    x6_intervalo_control_dias: 180
+
+    # x7: 1 si el paciente procede de fuera de Lima Metropolitana.
+    # Binario a proposito: el costo de viajar a Lima para una cita de
+    # transicion es una barrera de tipo distinto, no de grado.
+    x7_lima_metropolitana:
+      - "Lima"
+      - "Lima Metropolitana"
+      - "Callao"
+
+# ═════════════════════════════════════════════════════════════════════════════
+# SEMAFORO
+# ═════════════════════════════════════════════════════════════════════════════
+semaforo:
+  # PROVISIONAL. El umbral rojo NO debe quedarse en un numero inventado:
+  # `calibrar_umbral_rojo(cohorte, capacidad_mensual)` lo deriva de la
+  # capacidad real del equipo (PLAN_TECNICO §6.2). Estos valores son el
+  # respaldo mientras no se conozca la capacidad.
+  # TODO: confirmar con mentor — capacidad mensual del equipo de transicion.
+  umbral_rojo: 0.80
+  umbral_ambar: 0.50
+  capacidad_mensual_equipo: null   # sin dato: se usa umbral_rojo fijo
+
+  # Fraccion minima del peso del modelo que debe apoyarse en datos reales para
+  # que el indice se considere accionable. Por debajo de esto la interfaz
+  # muestra "datos insuficientes" junto al semaforo: no cambia la prioridad,
+  # cambia lo que el sistema afirma saber.
+  # Un paciente con SIS, sin TRAQ, sin ultima consulta y sin procedencia tiene
+  # imputado el 33 % del modelo (betas 0.9 + 1.0 + 0.8 + 0.6 = 3.3 de 10) y
+  # hoy saldria con un puntaje de aspecto tan firme como el de un paciente
+  # con la historia completa.
+  # PROVISIONAL — TODO: confirmar con mentor a partir de que punto un puntaje
+  # deja de ser accionable.
+  confianza_minima: 0.70
+
+# ═════════════════════════════════════════════════════════════════════════════
+# SEVERIDAD POR CATEGORIA CCC v2
+#   Feudtner et al., "Pediatric complex chronic conditions classification
+#   system version 2", BMC Pediatrics 2014;14:199.
+#   Peso 1 = cronica; 2 = cronica compleja; 3 = amenaza vital / organo vital.
+#   PROVISIONAL — TODO: confirmar con mentor.
+# ═════════════════════════════════════════════════════════════════════════════
+severidad_por_categoria:
+  neuromuscular: 2
+  cardiovascular: 3
+  respiratoria: 3
+  renal: 3
+  gastrointestinal: 2
+  hematologica_inmunologica: 2
+  metabolica: 2
+  congenita_genetica: 2
+  malignidad: 3
+  neonatal: 1
+  dependencia_tecnologica: 3
+  trasplante: 3
+  otra: 1
+
+# ═════════════════════════════════════════════════════════════════════════════
+# DISPOSITIVOS Y PESO DE DEPENDENCIA TECNOLOGICA
+#   Categoria "Technology dependence" de CCC v2. El peso refleja cuanto
+#   depende la vida del paciente del dispositivo, no su costo.
+#   PROVISIONAL — TODO: confirmar con mentor.
+# ═════════════════════════════════════════════════════════════════════════════
+peso_dispositivos:
+  traqueostomia: 3
+  ventilacion_mecanica: 3
+  ventilacion_no_invasiva: 2
+  dialisis_peritoneal: 3
+  hemodialisis: 3
+  gastrostomia: 2
+  yeyunostomia: 2
+  cateter_venoso_central: 2
+  derivacion_ventriculoperitoneal: 2
+  marcapasos: 2
+  colostomia: 1
+  sonda_vesical: 1
+  oxigeno_domiciliario: 1
+  bomba_insulina: 1
+  audifono: 0
+  protesis: 0
+
+# ═════════════════════════════════════════════════════════════════════════════
+# CONTINUIDAD DE SEGURO AL CUMPLIR 18 (x8)
+#
+#   VERIFICADO — EsSalud: los hijos dejan de ser derechohabientes a los 18
+#   salvo que acrediten incapacidad total y permanente ante la Comision
+#   Medica Evaluadora (Ley 26790 y su reglamento). Un cronico que no califica
+#   como discapacitado total pierde la cobertura. Riesgo = 1.0.
+#
+#   NO VERIFICADO — SIS: no sabemos que pasa al cumplir 18.
+#   TODO: verificar con Servicio Social INSN. Mientras tanto 0.5 y el factor
+#   se marca dato_faltante=True para que la interfaz lo muestre como supuesto.
+# ═════════════════════════════════════════════════════════════════════════════
+riesgo_seguro:
+  ESSALUD:
+    valor: 1.0
+    verificado: true
+    fuente: "Ley 26790 — derechohabiente hasta los 18 salvo incapacidad total"
+  SIS:
+    valor: 0.5
+    verificado: false
+    fuente: "TODO: verificar con Servicio Social INSN"
+  PRIVADO:
+    valor: 0.3
+    verificado: false
+    fuente: "TODO: depende de la poliza familiar"
+  NINGUNO:
+    valor: 1.0
+    verificado: true
+    fuente: "Sin seguro no hay continuidad que preservar: riesgo maximo"
+
+# ═════════════════════════════════════════════════════════════════════════════
+# HITOS DEL PASAPORTE (PLAN_TECNICO §9)
+# ═════════════════════════════════════════════════════════════════════════════
+hitos_pasaporte:
+  - edad: 14
+    version: "v1"
+    extension: "media pagina"
+  - edad: 16
+    version: "v2"
+    extension: "1 pagina"
+  - edad: 17
+    version: "v3"
+    extension: "2 paginas"

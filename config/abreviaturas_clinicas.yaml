@@ -1,0 +1,201 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Glosario de abreviaturas del espanol clinico peruano — PLAN_TECNICO §8.3
+#
+# POR QUE EXISTE ESTE ARCHIVO
+#
+# Si un medico escribe una abreviatura, otro medico la lee: no son codigos
+# privados y un modelo de lenguaje razonable las maneja. El riesgo general es
+# menor de lo que parece. Pero queda un residuo especifico y peligroso: las
+# abreviaturas del espanol clinico peruano son locales, y algunas son
+# ambiguas.
+#
+# El caso que motivo todo esto, tomado del propio formulario del INSN:
+#
+#     PC aparece en Examen Fisico junto a Peso y Talla -> PERIMETRO CEFALICO
+#     PC es tambien la abreviatura habitual de           PARALISIS CEREBRAL
+#
+# Un modelo entrenado mayormente en texto clinico en ingles puede confundirlas.
+# Poner "paralisis cerebral" en un Pasaporte que un medico va a firmar rapido
+# es exactamente el error que este sistema no puede cometer.
+#
+# COMO SE USA
+#   1. `normalizador_abreviaturas.py` expande las INEQUIVOCAS antes de llamar
+#      al modelo. Asi no dependemos de que el modelo acierte.
+#   2. Las marcadas `ambigua: true` NO se expanden nunca automaticamente. Se
+#      inyectan en el prompt con sus sentidos posibles y la instruccion de
+#      resolver por contexto de seccion o dejar sin expandir.
+#   3. NUNCA adivinar. Sin contexto suficiente, la abreviatura se deja tal cual.
+# ─────────────────────────────────────────────────────────────────────────────
+
+version: "0.1.0"
+fuente: "Formulario de historia clinica INSN San Borja (RD N° 000109-2021-DG-INSN-SB) y uso clinico peruano corriente"
+
+# ═════════════════════════════════════════════════════════════════════════════
+# AMBIGUAS — no se expanden solas. Jamas.
+# ═════════════════════════════════════════════════════════════════════════════
+ambiguas:
+  PC:
+    sentidos:
+      - expansion: "perimetro cefalico"
+        secciones: [examen_fisico, antropometria, signos_vitales]
+        pistas: ["cm", "peso", "talla", "percentil", "PT", "PA"]
+      - expansion: "paralisis cerebral"
+        secciones: [diagnosticos, antecedentes, problemas]
+        pistas: ["G80", "espastica", "cuadriplejica", "diplejia", "GMFCS"]
+    nota: >-
+      El caso de regresion del proyecto. Un paciente de la cohorte sintetica
+      lleva PC en sentido de perimetro cefalico a proposito, y hay un test que
+      falla si el sistema lo convierte en un diagnostico.
+
+  PA:
+    sentidos:
+      - expansion: "presion arterial"
+        secciones: [examen_fisico, signos_vitales]
+        pistas: ["mmHg", "/", "sistolica", "diastolica"]
+      - expansion: "perimetro abdominal"
+        secciones: [examen_fisico, antropometria]
+        pistas: ["cm", "peso", "talla"]
+
+  TA:
+    sentidos:
+      - expansion: "tension arterial"
+        secciones: [examen_fisico, signos_vitales]
+        pistas: ["mmHg"]
+      - expansion: "tiempo de anticoagulacion"
+        secciones: [laboratorio]
+        pistas: ["INR", "TP", "TTPA"]
+
+  SD:
+    sentidos:
+      - expansion: "sindrome de Down"
+        secciones: [diagnosticos, antecedentes]
+        pistas: ["Q90", "trisomia", "21"]
+      - expansion: "sindrome"
+        secciones: [diagnosticos]
+        pistas: []
+
+  RN:
+    sentidos:
+      - expansion: "recien nacido"
+        secciones: [antecedentes, perinatales]
+        pistas: ["parto", "gestacion", "APGAR", "semanas"]
+      - expansion: "resonancia nuclear"
+        secciones: [imagenes, examenes]
+        pistas: ["magnetica", "RMN", "contraste"]
+
+  DM:
+    sentidos:
+      - expansion: "diabetes mellitus"
+        secciones: [diagnosticos, antecedentes]
+        pistas: ["E10", "E11", "insulina", "HbA1c", "tipo 1", "tipo 2"]
+      - expansion: "distrofia muscular"
+        secciones: [diagnosticos]
+        pistas: ["G71", "Duchenne", "CPK"]
+
+# ═════════════════════════════════════════════════════════════════════════════
+# INEQUIVOCAS — se expanden automaticamente antes de llamar al modelo.
+# ═════════════════════════════════════════════════════════════════════════════
+inequivocas:
+  # ── Antropometria y examen fisico (formulario INSN) ───────────────────────
+  SOMA: "sistema osteomuscular y articular"
+  TCSC: "tejido celular subcutaneo"
+  MTD: "miembro toracico derecho"
+  MTI: "miembro toracico izquierdo"
+  MPD: "miembro pelvico derecho"
+  MPI: "miembro pelvico izquierdo"
+  MSD: "miembro superior derecho"
+  MSI: "miembro superior izquierdo"
+  MID: "miembro inferior derecho"
+  MII: "miembro inferior izquierdo"
+  IMC: "indice de masa corporal"
+  FC: "frecuencia cardiaca"
+  FR: "frecuencia respiratoria"
+  SatO2: "saturacion de oxigeno"
+  ACP: "auscultacion cardiopulmonar"
+  MV: "murmullo vesicular"
+  RCR: "ruidos cardiacos regulares"
+  RHA: "ruidos hidroaereos"
+  LOTEP: "lucido orientado en tiempo espacio y persona"
+
+  # ── Antecedentes ──────────────────────────────────────────────────────────
+  LME: "lactancia materna exclusiva"
+  CPN: "control prenatal"
+  FUR: "fecha de ultima regla"
+  APP: "antecedentes patologicos personales"
+  APF: "antecedentes patologicos familiares"
+  AQx: "antecedentes quirurgicos"
+  RAM: "reaccion adversa a medicamentos"
+  NAC: "niega alergias conocidas"
+
+  # ── Laboratorio y procedimientos ──────────────────────────────────────────
+  HGT: "hemoglucotest"
+  HB: "hemoglobina"
+  HTO: "hematocrito"
+  AGA: "analisis de gases arteriales"
+  TGO: "transaminasa glutamico-oxalacetica"
+  TGP: "transaminasa glutamico-piruvica"
+  EKG: "electrocardiograma"
+  ECG: "electrocardiograma"
+  EEG: "electroencefalograma"
+  RMN: "resonancia magnetica nuclear"
+  TEM: "tomografia espiral multicorte"
+  TAC: "tomografia axial computarizada"
+  ECO: "ecografia"
+  VFG: "velocidad de filtracion glomerular"
+  TFG: "tasa de filtracion glomerular"
+
+  # ── Dispositivos y soporte ────────────────────────────────────────────────
+  VMI: "ventilacion mecanica invasiva"
+  VMNI: "ventilacion mecanica no invasiva"
+  CPAP: "presion positiva continua en la via aerea"
+  BIPAP: "presion positiva binivel en la via aerea"
+  GTT: "gastrostomia"
+  DVP: "derivacion ventriculoperitoneal"
+  CVC: "cateter venoso central"
+  SNG: "sonda nasogastrica"
+  TQT: "traqueostomia"
+
+  # ── Servicios y administrativo ────────────────────────────────────────────
+  INSN: "Instituto Nacional de Salud del Nino"
+  UCI: "unidad de cuidados intensivos"
+  UCIP: "unidad de cuidados intensivos pediatricos"
+  HC: "historia clinica"
+  CE: "consultorio externo"
+  SIS: "Seguro Integral de Salud"
+  DNI: "documento nacional de identidad"
+  TRAQ: "cuestionario de preparacion para la transicion"
+
+  # ── Diagnosticos inequivocos en contexto pediatrico peruano ───────────────
+  ERC: "enfermedad renal cronica"
+  FQ: "fibrosis quistica"
+  LLA: "leucemia linfoblastica aguda"
+  AME: "atrofia muscular espinal"
+  HTP: "hipertension pulmonar"
+  CIV: "comunicacion interventricular"
+  CIA: "comunicacion interauricular"
+  TGA: "transposicion de grandes arterias"
+  HSC: "hiperplasia suprarrenal congenita"
+  TDAH: "trastorno por deficit de atencion e hiperactividad"
+  TEA: "trastorno del espectro autista"
+
+# ═════════════════════════════════════════════════════════════════════════════
+# NUNCA EXPANDIR — falsos positivos conocidos.
+# Cadenas que parecen abreviaturas y no lo son. Sin esta lista el normalizador
+# destroza el texto.
+# ═════════════════════════════════════════════════════════════════════════════
+nunca_expandir:
+  - "mg"
+  - "ml"
+  - "kg"
+  - "cm"
+  - "mm"
+  - "dl"
+  - "UI"
+  - "VO"
+  - "EV"
+  - "IM"
+  - "SC"
+  - "PRN"
+  - "BID"
+  - "TID"
+  - "QD"

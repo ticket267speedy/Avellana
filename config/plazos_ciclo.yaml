@@ -1,0 +1,93 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Plazos del ciclo de transicion — POLITICA, NO CODIGO
+#
+# Calibrados con datos peruanos reales, no con intuicion:
+#   Estudio DIRIS Lima Norte, Revista Medica Herediana — 19 951 referencias.
+#   NT 018-MINSA/DGSP-V.01 — Sistema de Referencia y Contrarreferencia.
+#
+# Cada plazo lleva su justificacion. Un umbral sin fuente es un umbral
+# inventado, y un umbral inventado que dispara alertas falsas mata el sistema:
+# el equipo deja de leer los avisos.
+# ─────────────────────────────────────────────────────────────────────────────
+
+version: "0.1.0"
+fecha_revision: "2026-08-14"
+
+transiciones:
+  - desde: PASAPORTE_EMITIDO
+    hasta: REFERENCIA_REGISTRADA
+    plazo_dias: 7
+    justificacion: >-
+      Tramite puramente administrativo. Registrar la referencia en el sistema
+      no depende de terceros ni de disponibilidad de agenda.
+    fuente: "NT 018-MINSA/DGSP-V.01"
+
+  - desde: REFERENCIA_REGISTRADA
+    hasta: REFERENCIA_ACEPTADA
+    plazo_dias: 30
+    justificacion: >-
+      Solo el 23.14 % de las referencias se acepta dentro de las 24 horas, y
+      el 13.6 % vuelve rechazada por informacion incompleta. Un plazo corto
+      marcaria como vencido el curso normal del tramite.
+    fuente: "DIRIS Lima Norte, Rev Med Hered — 19 951 referencias"
+
+  - desde: REFERENCIA_ACEPTADA
+    hasta: CITA_PROGRAMADA
+    plazo_dias: 120
+    justificacion: >-
+      La MEDIANA del intervalo aceptacion -> cita es de 80 a 85 dias. Un
+      umbral de 90 dias disparia alerta en la mitad de los casos que van
+      completamente bien. 120 dias deja pasar el comportamiento tipico y
+      marca solo la cola larga. Este es el numero que mas importa: es la
+      diferencia entre un sistema que se lee y uno que se ignora.
+    fuente: "DIRIS Lima Norte, Rev Med Hered — mediana 80-85 dias"
+
+  - desde: CITA_PROGRAMADA
+    hasta: CITA_CUMPLIDA
+    plazo_dias: 30
+    justificacion: >-
+      Contado desde la fecha de la cita, no desde su programacion. Treinta
+      dias despues de la fecha sin confirmacion de asistencia es inasistencia.
+    fuente: "PLAN_TECNICO §7"
+    contado_desde: fecha_cita
+
+  - desde: CITA_CUMPLIDA
+    hasta: CONTRARREFERENCIA
+    plazo_dias: 30
+    justificacion: >-
+      Plazo nominal. En la practica casi nunca se cumple: ver nota de abajo.
+    fuente: "NT 018-MINSA/DGSP-V.01"
+
+# ═════════════════════════════════════════════════════════════════════════════
+# DOBLE FUENTE DE CONFIRMACION — PLAN_TECNICO §7
+#
+# El mismo estudio documenta 110 contrarreferencias sobre 19 951 referencias:
+# 0.55 %. La via formal NO funciona empiricamente. Esperar a la
+# contrarreferencia para dar por cerrado el ciclo es esperar algo que en 99
+# de cada 100 casos no va a llegar.
+#
+# Por eso el estado CITA_CUMPLIDA admite dos fuentes, y el indicador se
+# desagrega por fuente: la proporcion de cada una es en si misma un hallazgo
+# del piloto, no un detalle de implementacion.
+# ═════════════════════════════════════════════════════════════════════════════
+fuentes_confirmacion:
+  CONTRARREFERENCIA:
+    tipo: formal
+    proporcion_esperada: 0.0055
+    fuente: "110 / 19 951 — DIRIS Lima Norte"
+  CONFIRMACION_FAMILIA:
+    tipo: pragmatica
+    proporcion_esperada: null   # es lo que el piloto viene a medir
+    fuente: "WhatsApp o llamada telefonica al contacto verificado"
+
+# ═════════════════════════════════════════════════════════════════════════════
+# ALERTA ANTICIPADA
+# Un plazo vencido ya es tarde. El sistema avisa antes de que venza.
+# ═════════════════════════════════════════════════════════════════════════════
+preaviso:
+  # Se avisa cuando queda este porcentaje del plazo. Con 120 dias, el
+  # preaviso cae al dia 90 — justo en la mediana observada, que es donde
+  # todavia se puede hacer algo.
+  fraccion_restante: 0.25
+  # Nunca avisar con menos de esto, aunque la fraccion de al menos.
+  minimo_dias: 3

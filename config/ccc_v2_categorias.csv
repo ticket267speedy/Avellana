@@ -1,0 +1,77 @@
+# Complex Chronic Conditions v2 — subconjunto representativo para el MVP
+# Feudtner C, Feinstein JA, Zhong W, Hall M, Dai D. "Pediatric complex chronic
+# conditions classification system version 2: updated for ICD-10 and complex
+# medical technology dependence and transplantation." BMC Pediatr 2014;14:199.
+#
+# ADVERTENCIA DE ALCANCE, DECLARADA EN LA INTERFAZ:
+# esto NO es el listado completo de CCC v2. Son 10 categorias con codigos
+# representativos, suficientes para demostrar el motor. El listado completo es
+# cargable sin tocar codigo: se reemplaza este archivo. No fingimos cobertura.
+codigo_cie10,descripcion,categoria,severidad
+G80.9,Paralisis cerebral sin otra especificacion,neuromuscular,2
+G80.0,Paralisis cerebral cuadriplejica espastica,neuromuscular,3
+G40.9,Epilepsia sin otra especificacion,neuromuscular,2
+G40.3,Epilepsia generalizada idiopatica,neuromuscular,2
+G71.0,Distrofia muscular,neuromuscular,3
+G12.1,Atrofia muscular espinal,neuromuscular,3
+Q05.9,Espina bifida sin otra especificacion,neuromuscular,3
+Q03.9,Hidrocefalia congenita,neuromuscular,3
+Q21.3,Tetralogia de Fallot,cardiovascular,3
+Q23.4,Sindrome del corazon izquierdo hipoplasico,cardiovascular,3
+Q21.0,Comunicacion interventricular,cardiovascular,2
+I42.0,Cardiomiopatia dilatada,cardiovascular,3
+I27.0,Hipertension pulmonar primaria,cardiovascular,3
+Q20.0,Tronco arterioso comun,cardiovascular,3
+E84.0,Fibrosis quistica con manifestaciones pulmonares,respiratoria,3
+E84.9,Fibrosis quistica sin otra especificacion,respiratoria,3
+J84.9,Enfermedad pulmonar intersticial,respiratoria,3
+P27.1,Displasia broncopulmonar,respiratoria,2
+J45.9,Asma sin otra especificacion,respiratoria,1
+N18.5,Enfermedad renal cronica estadio 5,renal,3
+N18.3,Enfermedad renal cronica estadio 3,renal,2
+Q60.4,Hipoplasia renal bilateral,renal,3
+N04.9,Sindrome nefrotico,renal,2
+Q62.0,Hidronefrosis congenita,renal,2
+K90.0,Enfermedad celiaca,gastrointestinal,1
+K50.9,Enfermedad de Crohn,gastrointestinal,2
+K51.9,Colitis ulcerativa,gastrointestinal,2
+K74.6,Cirrosis hepatica,gastrointestinal,3
+Q41.9,Atresia intestinal,gastrointestinal,3
+Q39.1,Atresia de esofago con fistula traqueoesofagica,gastrointestinal,3
+D57.1,Anemia de celulas falciformes sin crisis,hematologica_inmunologica,3
+D56.1,Talasemia beta,hematologica_inmunologica,3
+D66,Deficiencia hereditaria del factor VIII (hemofilia A),hematologica_inmunologica,3
+D67,Deficiencia hereditaria del factor IX (hemofilia B),hematologica_inmunologica,3
+D61.0,Anemia aplastica constitucional,hematologica_inmunologica,3
+D80.1,Inmunodeficiencia con predominio de anticuerpos,hematologica_inmunologica,2
+D84.1,Defecto del sistema del complemento,hematologica_inmunologica,2
+B20,Enfermedad por VIH,hematologica_inmunologica,3
+E10.9,Diabetes mellitus tipo 1 sin complicaciones,metabolica,2
+E10.2,Diabetes mellitus tipo 1 con complicacion renal,metabolica,3
+E70.0,Fenilcetonuria clasica,metabolica,2
+E74.0,Enfermedad por deposito de glucogeno,metabolica,3
+E76.0,Mucopolisacaridosis tipo I,metabolica,3
+E75.2,Enfermedad de Gaucher,metabolica,3
+E25.0,Hiperplasia suprarrenal congenita,metabolica,2
+E03.1,Hipotiroidismo congenito,metabolica,1
+Q90.9,Sindrome de Down,congenita_genetica,2
+Q87.1,Sindrome de Prader-Willi,congenita_genetica,2
+Q96.9,Sindrome de Turner,congenita_genetica,2
+Q99.2,Sindrome del cromosoma X fragil,congenita_genetica,2
+Q77.4,Acondroplasia,congenita_genetica,1
+Q78.0,Osteogenesis imperfecta,congenita_genetica,3
+C91.0,Leucemia linfoblastica aguda,malignidad,3
+C71.9,Tumor maligno del encefalo,malignidad,3
+C64,Tumor maligno del rinon (Wilms),malignidad,3
+C40.9,Tumor maligno del hueso (osteosarcoma),malignidad,3
+C81.9,Linfoma de Hodgkin,malignidad,3
+P07.2,Inmaturidad extrema,neonatal,1
+P91.6,Encefalopatia hipoxico-isquemica,neonatal,2
+Z93.0,Traqueostomia,dependencia_tecnologica,3
+Z93.1,Gastrostomia,dependencia_tecnologica,3
+Z99.1,Dependencia de respirador,dependencia_tecnologica,3
+Z99.2,Dependencia de dialisis renal,dependencia_tecnologica,3
+Z94.0,Trasplante de rinon,trasplante,3
+Z94.1,Trasplante de corazon,trasplante,3
+Z94.4,Trasplante de higado,trasplante,3
+Z94.8,Trasplante de medula osea,trasplante,3

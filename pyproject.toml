@@ -1,0 +1,64 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "relevo"
+version = "0.1.0"
+description = "Sistema de acompanamiento de la transicion pediatrico-adulto (INSN San Borja)"
+readme = "README.md"
+requires-python = ">=3.12"
+authors = [{ name = "Equipo Avellana" }]
+
+# Dependencias minimas del nucleo ejecutable.
+# El paquete `dominio` NO usa ninguna de estas: corre con libreria estandar sola.
+dependencies = [
+    "pydantic>=2.0",
+    "PyYAML>=6.0",
+    "SQLAlchemy>=2.0",
+    "Jinja2>=3.1",
+    "qrcode[pil]>=7.4",
+]
+
+[project.optional-dependencies]
+# Todo lo de abajo es opcional a proposito: el sistema debe correr sin internet
+# y sin proveedores de modelo de lenguaje instalados.
+dev = [
+    "pytest>=8.0",
+    "mypy>=1.8",
+    "Faker>=25.0",
+]
+web = ["streamlit>=1.35"]
+fhir = ["fhir.resources>=7.1"]
+pdf = ["reportlab>=4.0"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-q --strict-markers"
+markers = [
+    "bloqueante: test que debe pasar antes de presentar (ver PLAN_TECNICO §14)",
+    "red: test que requiere internet; se omite por defecto",
+]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_unreachable = true
+mypy_path = "src"
+namespace_packages = true
+explicit_package_bases = true
+
+# El nucleo se verifica en modo estricto sin excepciones.
+[[tool.mypy.overrides]]
+module = ["relevo.dominio.*", "relevo.aplicacion.*"]
+disallow_any_explicit = false
+warn_return_any = true
+
+# Las librerias externas sin tipos no deben ensuciar el informe del nucleo.
+[[tool.mypy.overrides]]
+module = ["qrcode.*", "fhir.*", "streamlit.*", "faker.*", "reportlab.*"]
+ignore_missing_imports = true

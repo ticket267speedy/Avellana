@@ -1,0 +1,49 @@
+# ─── DATOS ───
+# Ningun dato de paciente, real o sintetico, entra al repositorio.
+data/
+*.db
+*.sqlite
+*.sqlite3
+salidas/
+*.pdf
+
+# ─── SECRETOS ───
+.env
+.env.local
+*.key
+credenciales*
+
+# ─── PYTHON ───
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+.venv/
+venv/
+env/
+
+# ─── HERRAMIENTAS ───
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.hypothesis/
+
+# ─── EDITOR ───
+.vscode/
+.idea/
+*.swp
+*~
+.DS_Store
+Thumbs.db
+
+# ─── EXCEPCIONES ───
+# Los archivos de configuracion clinica SI se versionan: son la politica, no datos.
+!config/
+!config/**

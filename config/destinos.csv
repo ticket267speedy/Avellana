@@ -1,0 +1,66 @@
+# Directorio de destinos: CIE-10 -> servicio de adultos
+#
+# ══════════════════════════════════════════════════════════════════════════════
+#   PENDIENTE MENTOR — ESTE ARCHIVO NO ESTA VALIDADO
+#
+#   PLAN_TECNICO §13: la asignacion automatica de hospital destino es clinica
+#   y legalmente inaceptable. EL SISTEMA PROPONE, UNA PERSONA FIRMA.
+#
+#   Lo que hay abajo son SUGERENCIAS por especialidad, no asignaciones. La
+#   interfaz debe mostrarlas siempre como "sugerido — requiere confirmacion"
+#   y nunca preseleccionar un destino sin que un humano lo elija.
+#
+#   TODO: confirmar con mentor — directorio real de destinos y convenios
+#   vigentes del INSN San Borja con hospitales de adultos.
+# ══════════════════════════════════════════════════════════════════════════════
+prefijo_cie10,especialidad_adulto,institucion_sugerida,confirmado,nota
+G80,Neurologia / Medicina Fisica y Rehabilitacion,PENDIENTE,no,TODO confirmar con mentor
+G40,Neurologia,PENDIENTE,no,TODO confirmar con mentor
+G71,Neurologia / Enfermedades Neuromusculares,PENDIENTE,no,TODO confirmar con mentor
+G12,Neurologia / Enfermedades Neuromusculares,PENDIENTE,no,TODO confirmar con mentor
+Q05,Neurocirugia,PENDIENTE,no,TODO confirmar con mentor
+Q03,Neurocirugia,PENDIENTE,no,TODO confirmar con mentor
+Q2,Cardiologia / Cardiopatia Congenita del Adulto,PENDIENTE,no,Subespecialidad escasa en el pais; TODO confirmar
+I42,Cardiologia,PENDIENTE,no,TODO confirmar con mentor
+I27,Cardiologia / Hipertension Pulmonar,PENDIENTE,no,TODO confirmar con mentor
+E84,Neumologia / Fibrosis Quistica del Adulto,PENDIENTE,no,TODO confirmar con mentor
+J84,Neumologia,PENDIENTE,no,TODO confirmar con mentor
+J45,Neumologia,PENDIENTE,no,TODO confirmar con mentor
+N18,Nefrologia,PENDIENTE,no,TODO confirmar con mentor
+N04,Nefrologia,PENDIENTE,no,TODO confirmar con mentor
+Q60,Nefrologia / Urologia,PENDIENTE,no,TODO confirmar con mentor
+K50,Gastroenterologia,PENDIENTE,no,TODO confirmar con mentor
+K51,Gastroenterologia,PENDIENTE,no,TODO confirmar con mentor
+K74,Gastroenterologia / Hepatologia,PENDIENTE,no,TODO confirmar con mentor
+K90,Gastroenterologia,PENDIENTE,no,TODO confirmar con mentor
+D57,Hematologia,PENDIENTE,no,TODO confirmar con mentor
+D56,Hematologia,PENDIENTE,no,TODO confirmar con mentor
+D66,Hematologia / Hemofilia,PENDIENTE,no,TODO confirmar con mentor
+D67,Hematologia / Hemofilia,PENDIENTE,no,TODO confirmar con mentor
+D61,Hematologia,PENDIENTE,no,TODO confirmar con mentor
+D80,Inmunologia / Alergia,PENDIENTE,no,TODO confirmar con mentor
+D84,Inmunologia / Alergia,PENDIENTE,no,TODO confirmar con mentor
+B20,Infectologia,PENDIENTE,no,TODO confirmar con mentor
+E10,Endocrinologia / Diabetes,PENDIENTE,no,TODO confirmar con mentor
+E70,Endocrinologia / Enfermedades Metabolicas,PENDIENTE,no,Metabolicas del adulto: oferta muy limitada; TODO confirmar
+E74,Endocrinologia / Enfermedades Metabolicas,PENDIENTE,no,TODO confirmar con mentor
+E76,Endocrinologia / Enfermedades Metabolicas,PENDIENTE,no,TODO confirmar con mentor
+E75,Endocrinologia / Enfermedades Metabolicas,PENDIENTE,no,TODO confirmar con mentor
+E25,Endocrinologia,PENDIENTE,no,TODO confirmar con mentor
+E03,Endocrinologia,PENDIENTE,no,TODO confirmar con mentor
+Q90,Medicina Interna / Genetica,PENDIENTE,no,TODO confirmar con mentor
+Q87,Genetica,PENDIENTE,no,TODO confirmar con mentor
+Q96,Endocrinologia / Genetica,PENDIENTE,no,TODO confirmar con mentor
+Q99,Genetica,PENDIENTE,no,TODO confirmar con mentor
+Q77,Traumatologia / Genetica,PENDIENTE,no,TODO confirmar con mentor
+Q78,Traumatologia / Genetica,PENDIENTE,no,TODO confirmar con mentor
+C91,Hematologia Oncologica,PENDIENTE,no,TODO confirmar con mentor
+C71,Oncologia / Neurocirugia,PENDIENTE,no,TODO confirmar con mentor
+C64,Oncologia,PENDIENTE,no,TODO confirmar con mentor
+C40,Oncologia / Traumatologia Oncologica,PENDIENTE,no,TODO confirmar con mentor
+C81,Hematologia Oncologica,PENDIENTE,no,TODO confirmar con mentor
+Z94,Trasplante,PENDIENTE,no,TODO confirmar con mentor
+Z93,Medicina Interna,PENDIENTE,no,TODO confirmar con mentor
+Z99,Medicina Interna,PENDIENTE,no,TODO confirmar con mentor
+M32,Reumatologia,PENDIENTE,no,TODO confirmar con mentor
+M33,Reumatologia,PENDIENTE,no,TODO confirmar con mentor

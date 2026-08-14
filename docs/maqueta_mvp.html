@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Puente 18+ — Maqueta del MVP</title>
+<style>
+  :root{
+    color-scheme: light;
+    --surface-1:#fcfcfb; --page:#f9f9f7;
+    --ink:#0b0b0b; --ink-2:#52514e; --muted:#898781;
+    --grid:#e1e0d9; --axis:#c3c2b7; --border:rgba(11,11,11,0.10);
+    --s1:#2a78d6; --s1-100:#cde2fb; --s1-250:#86b6ef; --s1-600:#184f95;
+    --good:#0ca30c; --warning:#fab219; --serious:#ec835a; --critical:#d03b3b;
+    --ok-text:#006300;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:where(:not([data-theme="light"])){
+      color-scheme: dark;
+      --surface-1:#1a1a19; --page:#0d0d0d;
+      --ink:#ffffff; --ink-2:#c3c2b7; --muted:#898781;
+      --grid:#2c2c2a; --axis:#383835; --border:rgba(255,255,255,0.10);
+      --s1:#3987e5; --s1-100:#104281; --s1-250:#1c5cab; --s1-600:#86b6ef;
+      --ok-text:#0ca30c;
+    }
+  }
+  :root[data-theme="dark"]{
+    color-scheme: dark;
+    --surface-1:#1a1a19; --page:#0d0d0d;
+    --ink:#ffffff; --ink-2:#c3c2b7; --muted:#898781;
+    --grid:#2c2c2a; --axis:#383835; --border:rgba(255,255,255,0.10);
+    --s1:#3987e5; --s1-100:#104281; --s1-250:#1c5cab; --s1-600:#86b6ef;
+    --ok-text:#0ca30c;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--page); color:var(--ink);
+    font-family:system-ui,-apple-system,"Segoe UI",sans-serif;
+    font-size:15px; line-height:1.5;
+  }
+  .wrap{max-width:1080px;margin:0 auto;padding:24px 20px 64px}
+  header.top{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:4px}
+  h1{font-size:22px;margin:0 0 2px;letter-spacing:-0.01em}
+  .sub{color:var(--ink-2);font-size:13.5px;margin:0}
+  .demo-flag{
+    display:inline-flex;align-items:center;gap:6px;margin:14px 0 20px;
+    background:var(--surface-1);border:1px solid var(--border);border-left:3px solid var(--warning);
+    border-radius:6px;padding:8px 12px;font-size:13px;color:var(--ink-2)
+  }
+  .theme-btn{background:var(--surface-1);border:1px solid var(--border);color:var(--ink-2);
+    border-radius:6px;padding:6px 11px;font-size:12.5px;cursor:pointer;font-family:inherit}
+  nav.tabs{display:flex;gap:4px;flex-wrap:wrap;border-bottom:1px solid var(--border);margin-bottom:22px}
+  nav.tabs button{
+    background:none;border:none;border-bottom:2px solid transparent;color:var(--ink-2);
+    padding:9px 13px;font-size:13.5px;cursor:pointer;font-family:inherit;margin-bottom:-1px
+  }
+  nav.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--s1);font-weight:600}
+  .panel{display:none}
+  .panel.on{display:block}
+  h2{font-size:16.5px;margin:0 0 3px;letter-spacing:-0.005em}
+  .lede{color:var(--ink-2);font-size:13.5px;margin:0 0 18px;max-width:74ch}
+  .card{background:var(--surface-1);border:1px solid var(--border);border-radius:10px;padding:18px}
+  .card + .card{margin-top:14px}
+
+  /* stat tiles */
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));gap:12px;margin-bottom:16px}
+  .kpi{background:var(--surface-1);border:1px solid var(--border);border-radius:10px;padding:14px 16px}
+  .kpi .lbl{font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:6px}
+  .kpi .val{font-size:29px;line-height:1.05;font-weight:600;letter-spacing:-0.02em}
+  .kpi .note{font-size:12px;color:var(--ink-2);margin-top:5px}
+  .kpi .note.warn{color:var(--critical)}
+
+  /* status chips: icon + label, nunca color solo */
+  .chip{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;
+    padding:2px 8px 2px 6px;border-radius:20px;border:1px solid var(--border);white-space:nowrap}
+  .chip .dot{width:9px;height:9px;border-radius:50%;flex:none}
+  .chip.rojo  .dot{background:var(--critical)} .chip.rojo{color:var(--critical)}
+  .chip.ambar .dot{background:var(--warning)}  .chip.ambar{color:var(--ink)}
+  .chip.verde .dot{background:var(--good)}     .chip.verde{color:var(--ok-text)}
+
+  table{width:100%;border-collapse:collapse;font-size:13.5px}
+  th{text-align:left;font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;
+     color:var(--muted);font-weight:600;padding:0 10px 8px;border-bottom:1px solid var(--grid)}
+  td{padding:11px 10px;border-bottom:1px solid var(--grid);vertical-align:middle}
+  tbody tr:hover{background:color-mix(in oklab, var(--s1) 6%, transparent)}
+  td.num{font-variant-numeric:tabular-nums;text-align:right}
+  .dx{color:var(--ink-2);font-size:12.5px}
+  code.cie{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;
+    background:color-mix(in oklab, var(--ink) 6%, transparent);padding:1px 5px;border-radius:4px}
+
+  /* barras de aporte */
+  .bars{display:flex;flex-direction:column;gap:8px;margin-top:6px}
+  .brow{display:grid;grid-template-columns:230px 1fr 52px;align-items:center;gap:12px}
+  .brow .bl{font-size:12.5px;color:var(--ink-2)}
+  .btrack{height:16px;background:color-mix(in oklab, var(--ink) 4%, transparent);border-radius:4px;overflow:hidden}
+  .bfill{height:100%;background:var(--s1);border-radius:0 4px 4px 0}
+  .bval{font-size:12.5px;font-variant-numeric:tabular-nums;text-align:right;color:var(--ink)}
+
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:820px){.grid2{grid-template-columns:1fr} .brow{grid-template-columns:150px 1fr 48px}}
+
+  /* pasaporte */
+  .passport{border:1px solid var(--axis);border-radius:8px;padding:18px;background:var(--surface-1);font-size:12.5px}
+  .passport h3{margin:0 0 2px;font-size:15px}
+  .passport .pmeta{color:var(--muted);font-size:11.5px;margin-bottom:12px}
+  .psec{margin-top:12px;padding-top:10px;border-top:1px solid var(--grid)}
+  .psec .t{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:5px}
+  .psec ul{margin:0;padding-left:17px} .psec li{margin-bottom:3px}
+  pre{background:color-mix(in oklab, var(--ink) 4%, transparent);border:1px solid var(--border);
+    border-radius:8px;padding:13px;overflow:auto;font-size:11.5px;line-height:1.55;
+    font-family:ui-monospace,SFMono-Regular,Menlo,monospace;margin:0}
+  .qr{width:88px;height:88px;image-rendering:pixelated;border:1px solid var(--border);border-radius:6px;background:#fff}
+
+  /* timeline */
+  .tl{position:relative;padding-left:26px;margin-top:8px}
+  .tl::before{content:"";position:absolute;left:7px;top:6px;bottom:6px;width:2px;background:var(--grid)}
+  .ti{position:relative;padding-bottom:16px}
+  .ti::before{content:"";position:absolute;left:-24px;top:4px;width:12px;height:12px;border-radius:50%;
+    background:var(--surface-1);border:2px solid var(--axis)}
+  .ti.done::before{background:var(--good);border-color:var(--good)}
+  .ti.now::before{background:var(--critical);border-color:var(--critical)}
+  .ti .d{font-size:11.5px;color:var(--muted)}
+  .ti .h{font-size:13.5px;font-weight:600}
+  .ti .b{font-size:12.5px;color:var(--ink-2)}
+
+  /* arquitectura */
+  .arch{display:flex;flex-direction:column;gap:0;align-items:center;text-align:center}
+  .abox{width:100%;max-width:620px;border:1px solid var(--border);border-radius:9px;padding:13px 16px;background:var(--surface-1)}
+  .abox .at{font-size:13.5px;font-weight:600} .abox .ab{font-size:12px;color:var(--ink-2);margin-top:2px}
+  .abox.ext{border-style:dashed;background:transparent}
+  .abox.core{border-color:var(--s1);border-width:2px}
+  .arrow{color:var(--muted);font-size:17px;line-height:1;padding:6px 0}
+  .arow{display:flex;gap:10px;width:100%;max-width:620px;flex-wrap:wrap}
+  .arow .abox{flex:1;min-width:130px}
+  .foot{font-size:12.5px;color:var(--muted);margin-top:26px;border-top:1px solid var(--border);padding-top:14px}
+  ul.plain{font-size:13.5px;color:var(--ink-2);padding-left:19px;margin:8px 0 0} ul.plain li{margin-bottom:5px}
+  .tag{display:inline-block;font-size:11px;background:color-mix(in oklab,var(--s1) 14%, transparent);
+    color:var(--ink);padding:2px 7px;border-radius:4px;margin-right:5px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <div>
+    <h1>Puente 18+ <span style="font-weight:400;color:var(--muted);font-size:15px">— maqueta del MVP</span></h1>
+    <p class="sub">Transición pediátrico → adulto · INSN San Borja · Hackathon</p>
+  </div>
+  <button class="theme-btn" id="tbtn">Modo oscuro</button>
+</header>
+
+<div class="demo-flag">
+  <span class="chip ambar"><span class="dot"></span>DEMO</span>
+  Todos los datos son <strong>sintéticos</strong>. Ningún dato de paciente real.
+</div>
+
+<nav class="tabs" role="tablist">
+  <button role="tab" aria-selected="true"  data-p="p0">Qué es el MVP</button>
+  <button role="tab" aria-selected="false" data-p="p1">1 · Radar</button>
+  <button role="tab" aria-selected="false" data-p="p2">2 · Ficha e índice</button>
+  <button role="tab" aria-selected="false" data-p="p3">3 · Pasaporte 18+</button>
+  <button role="tab" aria-selected="false" data-p="p4">4 · Cierre de ciclo</button>
+</nav>
+
+<!-- ══════════ 0 · ARQUITECTURA ══════════ -->
+<section class="panel on" id="p0">
+  <h2>El MVP es una aplicación web que se conecta por los bordes</h2>
+  <p class="lede">No se instala dentro del sistema del INSN ni del hospital de adultos, y no modifica una sola línea de su código. Es un módulo periférico: <strong>lee por un puerto de entrada, escribe por un puerto de salida.</strong> Lo único que cambia entre la demo y el despliegue real es la caja de arriba.</p>
+
+  <div class="card">
+    <div class="arch">
+      <div class="abox ext">
+        <div class="at">Fuente de datos <span class="tag">intercambiable</span></div>
+        <div class="ab">Hoy en la demo: CSV sintético · Mañana: base del INSN, export del HIS, o RENHICE vía FHIR</div>
+      </div>
+      <div class="arrow">↓</div>
+      <div class="abox">
+        <div class="at">Adaptador / ETL</div>
+        <div class="ab">Única pieza que se reescribe según el sistema de origen (~5 % del código)</div>
+      </div>
+      <div class="arrow">↓</div>
+      <div class="abox core">
+        <div class="at">Núcleo — esto es lo que construimos</div>
+        <div class="ab">Modelo de datos FHIR R4 (perfiles CorePE del MINSA) · Motor de reglas en YAML · Índice de Urgencia de Transición · NLP para resumen y extracción</div>
+      </div>
+      <div class="arrow">↓</div>
+      <div class="arow">
+        <div class="abox"><div class="at">Radar</div><div class="ab">equipo clínico</div></div>
+        <div class="abox"><div class="at">Pasaporte</div><div class="ab">PDF + QR + FHIR</div></div>
+        <div class="abox"><div class="at">Checklist</div><div class="ab">paciente / familia</div></div>
+        <div class="abox"><div class="at">Cierre</div><div class="ab">contrarreferencia</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid2" style="margin-top:14px">
+    <div class="card">
+      <h2 style="font-size:14px">Lo que el MVP <em>sí</em> hace</h2>
+      <ul class="plain">
+        <li>Lee una copia de datos, en formato estándar</li>
+        <li>Prioriza y explica <strong>por qué</strong> prioriza</li>
+        <li>Genera el documento de traspaso que hoy no existe</li>
+        <li>Cuenta los días y avisa si nadie confirmó la llegada</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h2 style="font-size:14px">Lo que el MVP <em>no</em> hace</h2>
+      <ul class="plain">
+        <li>No escribe en la historia clínica del hospital</li>
+        <li>No decide nada solo: el médico firma el Pasaporte</li>
+        <li>No reemplaza al coordinador humano — lo hace escalable</li>
+        <li>No asigna el hospital destino por sí mismo <span style="color:var(--critical)">(← problema abierto)</span></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════ 1 · RADAR ══════════ -->
+<section class="panel" id="p1">
+  <h2>Radar de Transición — pantalla del equipo clínico</h2>
+  <p class="lede">Cohorte de 14 a 18 años ordenada por Índice de Urgencia de Transición (IUT). El semáforo no es decorativo: define quién entra este mes al programa, y el umbral se calibra según cuántos pacientes puede realmente atender el equipo.</p>
+
+  <div class="kpis">
+    <div class="kpi"><div class="lbl">Cohorte 14–18</div><div class="val">247</div><div class="note">pacientes crónicos activos</div></div>
+    <div class="kpi"><div class="lbl">Prioridad alta</div><div class="val">18</div><div class="note warn">cumplen 18 en &lt; 12 meses</div></div>
+    <div class="kpi"><div class="lbl">Sin plan de transición</div><div class="val">231</div><div class="note">93 % de la cohorte</div></div>
+    <div class="kpi"><div class="lbl">Transferencia efectiva</div><div class="val">—</div><div class="note">hoy no se mide</div></div>
+  </div>
+
+  <div class="card">
+    <table>
+      <thead><tr>
+        <th>Paciente <span style="text-transform:none;font-weight:400">(ficticio)</span></th>
+        <th>Edad</th><th>Diagnóstico principal</th><th class="num">Dx activos</th>
+        <th class="num">Meses a los 18</th><th class="num">IUT</th><th>Estado</th>
+      </tr></thead>
+      <tbody>
+        <tr><td><strong>A. Quispe M.</strong></td><td>17 a 5 m</td>
+            <td class="dx">Fibrosis quística <code class="cie">E84.0</code></td>
+            <td class="num">4</td><td class="num">7</td><td class="num"><strong>0.91</strong></td>
+            <td><span class="chip rojo"><span class="dot"></span>Rojo</span></td></tr>
+        <tr><td><strong>J. Ramos T.</strong></td><td>17 a 9 m</td>
+            <td class="dx">Cardiopatía congénita compleja <code class="cie">Q21.3</code></td>
+            <td class="num">3</td><td class="num">3</td><td class="num"><strong>0.88</strong></td>
+            <td><span class="chip rojo"><span class="dot"></span>Rojo</span></td></tr>
+        <tr><td><strong>M. Huamán C.</strong></td><td>17 a 1 m</td>
+            <td class="dx">ERC estadio 5 en diálisis <code class="cie">N18.5</code></td>
+            <td class="num">5</td><td class="num">11</td><td class="num"><strong>0.84</strong></td>
+            <td><span class="chip rojo"><span class="dot"></span>Rojo</span></td></tr>
+        <tr><td><strong>L. Ccahuana S.</strong></td><td>16 a 4 m</td>
+            <td class="dx">Parálisis cerebral + epilepsia <code class="cie">G80.9</code></td>
+            <td class="num">4</td><td class="num">20</td><td class="num">0.67</td>
+            <td><span class="chip ambar"><span class="dot"></span>Ámbar</span></td></tr>
+        <tr><td><strong>D. Flores A.</strong></td><td>15 a 8 m</td>
+            <td class="dx">Diabetes mellitus tipo 1 <code class="cie">E10.9</code></td>
+            <td class="num">2</td><td class="num">28</td><td class="num">0.52</td>
+            <td><span class="chip ambar"><span class="dot"></span>Ámbar</span></td></tr>
+        <tr><td><strong>S. Mamani R.</strong></td><td>14 a 2 m</td>
+            <td class="dx">Artritis idiopática juvenil <code class="cie">M08.0</code></td>
+            <td class="num">1</td><td class="num">46</td><td class="num">0.21</td>
+            <td><span class="chip verde"><span class="dot"></span>Verde</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ══════════ 2 · FICHA ══════════ -->
+<section class="panel" id="p2">
+  <h2>Ficha del paciente — el índice se explica solo</h2>
+  <p class="lede">Al abrir un paciente no aparece solo un número: aparece <strong>de dónde sale ese número</strong>. Cada barra es el aporte βᵢxᵢ de un factor al puntaje. Un médico puede discutirlo, corregirlo y firmarlo. Un modelo opaco no permite eso.</p>
+
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:10px;margin-bottom:4px">
+      <div><strong style="font-size:16px">A. Quispe M.</strong> <span style="color:var(--ink-2);font-size:13px">· 17 a 5 m · HC 40218-S (ficticia)</span></div>
+      <div><span class="chip rojo"><span class="dot"></span>Rojo · IUT 0.91</span></div>
+    </div>
+    <p style="font-size:13px;color:var(--ink-2);margin:0 0 14px">
+      Fibrosis quística <code class="cie">E84.0</code> · ORPHA:586 · Diabetes relacionada con FQ <code class="cie">E10.9</code> ·
+      Insuficiencia pancreática <code class="cie">K86.8</code> · Colonización crónica por <em>P. aeruginosa</em> <code class="cie">B96.5</code>
+    </p>
+
+    <div class="bars">
+      <div class="brow"><div class="bl">Urgencia temporal (7 meses)</div>
+        <div class="btrack"><div class="bfill" style="width:85%"></div></div><div class="bval">+1.28</div></div>
+      <div class="brow"><div class="bl">Severidad ponderada (rara + multisistémica)</div>
+        <div class="btrack"><div class="bfill" style="width:73%"></div></div><div class="bval">+1.10</div></div>
+      <div class="brow"><div class="bl">Brecha de preparación (TRAQ 2.1 / 5)</div>
+        <div class="btrack"><div class="bfill" style="width:59%"></div></div><div class="bval">+0.89</div></div>
+      <div class="brow"><div class="bl">Complejidad (4 dx crónicos activos)</div>
+        <div class="btrack"><div class="bfill" style="width:48%"></div></div><div class="bval">+0.72</div></div>
+      <div class="brow"><div class="bl">Barrera de acceso (procedencia: Cusco)</div>
+        <div class="btrack"><div class="bfill" style="width:36%"></div></div><div class="bval">+0.54</div></div>
+      <div class="brow"><div class="bl">Continuidad de seguro (SIS cambia a los 18)</div>
+        <div class="btrack"><div class="bfill" style="width:27%"></div></div><div class="bval">+0.41</div></div>
+      <div class="brow"><div class="bl">Riesgo de pérdida (última cita: hace 5 m)</div>
+        <div class="btrack"><div class="bfill" style="width:19%"></div></div><div class="bval">+0.29</div></div>
+    </div>
+
+    <p style="font-size:12.5px;color:var(--muted);margin:16px 0 0;border-top:1px solid var(--grid);padding-top:11px;font-variant-numeric:tabular-nums">
+      z = β₀ + Σ βᵢxᵢ = −2.10 + 5.23 = 3.13 &nbsp;→&nbsp; IUT = σ(3.13) = 0.958 → 0.91 tras penalización por dato faltante.
+      Pesos β según <code class="cie">reglas_transicion.yaml v1.2</code>, revisado por el servicio.
+    </p>
+  </div>
+
+  <div class="card">
+    <h2 style="font-size:14px">Reglas como archivo, no como código</h2>
+    <p class="lede" style="margin-bottom:10px">Un médico edita esto sin tocar Python. Tiene versión, fecha y responsable — igual que un protocolo clínico.</p>
+<pre># reglas_transicion.yaml   v1.2   resp.: Servicio de Neumología   rev.: 2026-08-13
+ventana_inicio_anios: 14
+umbral_ambar: 0.45
+umbral_rojo:  0.75          # calibrado a 20 pacientes/mes de capacidad real
+
+condiciones_cronicas:
+  - { cie10: "E84*", orpha: 586, etiqueta: "Fibrosis quistica", peso: 5, rara: true }
+  - { cie10: "N18*", etiqueta: "Enfermedad renal cronica",      peso: 5 }
+  - { cie10: "Q21*", etiqueta: "Cardiopatia congenita",         peso: 4 }
+  - { cie10: "G80*", etiqueta: "Paralisis cerebral",            peso: 4 }
+  - { cie10: "E10*", etiqueta: "Diabetes tipo 1",               peso: 3 }
+
+dependencia_tecnologica:
+  - { termino: "ventilacion mecanica domiciliaria", peso: 5 }
+  - { termino: "dialisis peritoneal",               peso: 5 }
+  - { termino: "traqueostomia",                     peso: 4 }
+  - { termino: "gastrostomia",                      peso: 3 }</pre>
+  </div>
+</section>
+
+<!-- ══════════ 3 · PASAPORTE ══════════ -->
+<section class="panel" id="p3">
+  <h2>Pasaporte de Salud 18+ — el artefacto que cruza el puente</h2>
+  <p class="lede">Es el corazón del proyecto. Doce páginas de historia clínica y quince años de evoluciones comprimidas en una hoja que el paciente lleva encima, que el médico de adultos puede leer en dos minutos, y que además sale en formato máquina.</p>
+
+  <div class="grid2">
+    <div class="card">
+      <div class="passport">
+        <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start">
+          <div>
+            <h3>Pasaporte de Salud 18+</h3>
+            <div class="pmeta">A. Quispe M. · 17 a 5 m · HC 40218-S · Emitido 13-08-2026<br>
+            Firmado por: Dr. ██████, Neumología Pediátrica INSN-SB</div>
+          </div>
+          <svg class="qr" viewBox="0 0 21 21" aria-label="Código QR de ejemplo"><rect width="21" height="21" fill="#fff"/><g fill="#0b0b0b"><rect x="1" y="1" width="5" height="5"/><rect x="2" y="2" width="3" height="3" fill="#fff"/><rect x="3" y="3" width="1" height="1"/><rect x="15" y="1" width="5" height="5"/><rect x="16" y="2" width="3" height="3" fill="#fff"/><rect x="17" y="3" width="1" height="1"/><rect x="1" y="15" width="5" height="5"/><rect x="2" y="16" width="3" height="3" fill="#fff"/><rect x="3" y="17" width="1" height="1"/><rect x="8" y="1" width="1" height="2"/><rect x="10" y="2" width="1" height="3"/><rect x="12" y="1" width="1" height="1"/><rect x="8" y="4" width="2" height="1"/><rect x="7" y="7" width="1" height="1"/><rect x="9" y="7" width="2" height="1"/><rect x="12" y="7" width="1" height="2"/><rect x="14" y="8" width="2" height="1"/><rect x="17" y="7" width="1" height="2"/><rect x="8" y="9" width="1" height="2"/><rect x="10" y="10" width="3" height="1"/><rect x="15" y="10" width="1" height="2"/><rect x="18" y="10" width="1" height="1"/><rect x="7" y="12" width="2" height="1"/><rect x="11" y="12" width="1" height="2"/><rect x="13" y="13" width="2" height="1"/><rect x="16" y="12" width="1" height="1"/><rect x="18" y="13" width="1" height="2"/><rect x="8" y="15" width="1" height="1"/><rect x="10" y="16" width="2" height="1"/><rect x="13" y="15" width="1" height="3"/><rect x="15" y="17" width="2" height="1"/><rect x="19" y="16" width="1" height="2"/><rect x="8" y="18" width="3" height="1"/><rect x="12" y="19" width="1" height="1"/><rect x="15" y="19" width="1" height="1"/><rect x="17" y="18" width="1" height="1"/></g></svg>
+        </div>
+
+        <div class="psec"><div class="t">Diagnósticos activos</div>
+          <ul><li>Fibrosis quística — <code class="cie">E84.0</code> / <code class="cie">ORPHA:586</code></li>
+              <li>Diabetes relacionada con FQ — <code class="cie">E10.9</code></li>
+              <li>Insuficiencia pancreática exocrina — <code class="cie">K86.8</code></li></ul></div>
+
+        <div class="psec"><div class="t">Medicación activa</div>
+          <ul><li>Dornasa alfa nebulizada 2.5 mg / 24 h</li>
+              <li>Enzimas pancreáticas con cada comida</li>
+              <li>Insulina glargina 18 U nocturna</li></ul></div>
+
+        <div class="psec"><div class="t">Alergias / RAM</div>
+          <ul><li>Ceftriaxona — exantema (2019)</li></ul></div>
+
+        <div class="psec"><div class="t">Qué vigilar en el servicio de adultos</div>
+          <ul><li>Función pulmonar (VEF₁) cada 3 meses</li>
+              <li>Colonización crónica por <em>P. aeruginosa</em> — aislamiento en sala</li>
+              <li>Cribado anual de hepatopatía asociada a FQ</li></ul></div>
+
+        <div class="psec"><div class="t">Contactos</div>
+          <ul><li>Neumología Pediátrica INSN-SB — ref. de origen</li>
+              <li>Coordinación de transición — anexo 1118</li></ul></div>
+      </div>
+    </div>
+
+    <div>
+      <div class="card">
+        <h2 style="font-size:14px">Y el mismo contenido, en formato máquina</h2>
+        <p class="lede" style="margin-bottom:10px">Bundle FHIR R4 conforme al perfil <strong>CorePE del MINSA</strong>. No es un PDF bonito: es un documento clínico interoperable. El día que RENHICE esté operativo, esto se conecta sin reescribir nada.</p>
+<pre>{
+  "resourceType": "Bundle",
+  "meta": { "profile": [
+    "https://dyaku.minsa.gob.pe/.../BundlePe" ] },
+  "type": "document",
+  "entry": [
+    { "resource": {
+        "resourceType": "Composition",
+        "title": "Pasaporte de Salud 18+",
+        "status": "final" } },
+    { "resource": {
+        "resourceType": "Patient",
+        "birthDate": "2009-03-14" } },
+    { "resource": {
+        "resourceType": "Condition",
+        "code": { "coding": [
+          { "system": "http://hl7.org/fhir/sid/icd-10",
+            "code": "E84.0" },
+          { "system": "http://www.orpha.net",
+            "code": "586" } ] },
+        "clinicalStatus": "active" } },
+    { "resource": {
+        "resourceType": "AllergyIntolerance",
+        "code": { "text": "Ceftriaxona" } } }
+  ]
+}</pre>
+      </div>
+      <div class="card">
+        <h2 style="font-size:14px">Cómo se genera</h2>
+        <ul class="plain">
+          <li><strong>Campos ya codificados</strong> (CIE-10, alergias, fechas) → copia directa, sin IA.</li>
+          <li><strong>Texto libre</strong> (relato, antecedentes, plan) → resumen por NLP.</li>
+          <li><strong>Siempre</strong> → borrador que el médico revisa, corrige y firma. Nunca se emite solo.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════ 4 · CIERRE ══════════ -->
+<section class="panel" id="p4">
+  <h2>Cierre de ciclo — el indicador que hoy no existe</h2>
+  <p class="lede">La NT 018-MINSA ya obliga a contrarreferencia. En la práctica se emite la referencia y nadie confirma que el paciente llegó. El sistema abre un contador el día de la transferencia y avisa si a los 90 días no hay confirmación.</p>
+
+  <div class="kpis">
+    <div class="kpi"><div class="lbl">Transferidos (12 m)</div><div class="val">31</div><div class="note">cohorte piloto simulada</div></div>
+    <div class="kpi"><div class="lbl">Llegada confirmada</div><div class="val">19</div><div class="note" style="color:var(--ok-text)">61 % de transferencia efectiva</div></div>
+    <div class="kpi"><div class="lbl">Sin confirmar &gt; 90 d</div><div class="val">9</div><div class="note warn">requieren contacto activo</div></div>
+    <div class="kpi"><div class="lbl">Perdidos &gt; 12 m</div><div class="val">3</div><div class="note warn">brecha asistencial</div></div>
+  </div>
+
+  <div class="card">
+    <h2 style="font-size:14px">J. Ramos T. — cardiopatía congénita compleja</h2>
+    <div class="tl">
+      <div class="ti done"><div class="d">04-02-2026</div><div class="h">Pasaporte emitido y firmado</div><div class="b">PDF entregado a la familia + Bundle FHIR generado</div></div>
+      <div class="ti done"><div class="d">11-02-2026</div><div class="h">Referencia registrada en REFCON</div><div class="b">Destino: servicio de cardiología de adultos · NT 018-MINSA</div></div>
+      <div class="ti done"><div class="d">18-02-2026</div><div class="h">Cita de adultos agendada</div><div class="b">Programada para 02-04-2026</div></div>
+      <div class="ti now"><div class="d">Hoy · día 97</div><div class="h">Sin contrarreferencia recibida</div>
+        <div class="b">Superado el umbral de 90 días. <strong>Alerta emitida al equipo de transición</strong> → contacto telefónico con la familia y con el establecimiento receptor.</div></div>
+      <div class="ti"><div class="d">pendiente</div><div class="h">Confirmación de primera cita cumplida</div><div class="b">Cierra el ciclo y suma al indicador</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2 style="font-size:14px">La métrica del proyecto</h2>
+    <p style="font-size:13.5px;color:var(--ink-2);margin:8px 0 0">
+      <strong>Tasa de transferencia efectiva</strong> = pacientes con primera cita de adultos confirmada dentro de 6 meses ÷ pacientes transferidos.
+    </p>
+    <p style="font-size:13px;color:var(--muted);margin:9px 0 0">
+      Referencia internacional: los programas de transición estructurados reducen las brechas asistenciales de <strong>36.2 % a 12.7 %</strong>. Hoy el INSN no tiene este indicador; que el sistema lo produzca por primera vez ya es un resultado.
+    </p>
+  </div>
+</section>
+
+<p class="foot">Maqueta estática de diseño — no es el sistema funcionando. Sirve para alinear al equipo y al mentor sobre qué se va a construir. Datos sintéticos.</p>
+</div>
+
+<script>
+  const tabs=[...document.querySelectorAll('nav.tabs button')];
+  tabs.forEach(b=>b.addEventListener('click',()=>{
+    tabs.forEach(x=>x.setAttribute('aria-selected', x===b));
+    document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('on', p.id===b.dataset.p));
+    window.scrollTo({top:0,behavior:'smooth'});
+  }));
+  const btn=document.getElementById('tbtn');
+  btn.addEventListener('click',()=>{
+    const dark=document.documentElement.getAttribute('data-theme')==='dark';
+    document.documentElement.setAttribute('data-theme',dark?'light':'dark');
+    btn.textContent=dark?'Modo oscuro':'Modo claro';
+  });
+</script>
+</body>
+</html>

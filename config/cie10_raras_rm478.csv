@@ -1,0 +1,55 @@
+# Enfermedades raras o huerfanas — subconjunto representativo para el MVP
+# Fuente declarada: RM 478-2026-MINSA (11 de mayo de 2026), listado vigente de
+# enfermedades raras o huerfanas en el Peru — 558 diagnosticos en CIE-10.
+#
+# ADVERTENCIA DE ALCANCE, DECLARADA EN LA INTERFAZ:
+# aqui hay una muestra, no los 558. El archivo completo se carga reemplazando
+# este CSV, sin tocar una linea de codigo. La interfaz debe decir cuantos
+# codigos tiene cargados. No fingimos cobertura que no tenemos.
+#
+# NOTA DE PRECISION: no tuvimos acceso al anexo oficial completo de la RM al
+# construir esta muestra. Los codigos de abajo son enfermedades raras
+# reconocidas internacionalmente, pero la correspondencia exacta con el anexo
+# peruano NO esta verificada.
+# TODO: confirmar con mentor — obtener el anexo oficial de la RM 478-2026.
+codigo_cie10,descripcion,verificado_en_anexo
+G12.1,Atrofia muscular espinal,no
+G71.0,Distrofia muscular de Duchenne,no
+E76.0,Mucopolisacaridosis tipo I (Hurler),no
+E76.1,Mucopolisacaridosis tipo II (Hunter),no
+E76.2,Otras mucopolisacaridosis,no
+E75.2,Enfermedad de Gaucher,no
+E74.0,Enfermedad por deposito de glucogeno,no
+E70.0,Fenilcetonuria clasica,no
+E71.0,Enfermedad de la orina con olor a jarabe de arce,no
+E72.2,Trastorno del ciclo de la urea,no
+E88.0,Deficiencia de alfa-1-antitripsina,no
+Q78.0,Osteogenesis imperfecta,no
+Q87.1,Sindrome de Prader-Willi,no
+Q87.4,Sindrome de Marfan,no
+Q99.2,Sindrome del cromosoma X fragil,no
+Q77.4,Acondroplasia,no
+Q85.0,Neurofibromatosis,no
+Q85.1,Esclerosis tuberosa,no
+E84.0,Fibrosis quistica con manifestaciones pulmonares,no
+E84.1,Fibrosis quistica con manifestaciones intestinales,no
+D66,Hemofilia A,no
+D67,Hemofilia B,no
+D68.0,Enfermedad de von Willebrand,no
+D57.1,Anemia de celulas falciformes,no
+D61.0,Anemia aplastica constitucional (Fanconi),no
+D80.0,Agammaglobulinemia hereditaria,no
+D81.9,Inmunodeficiencia combinada grave,no
+G11.1,Ataxia de Friedreich,no
+G60.0,Neuropatia hereditaria (Charcot-Marie-Tooth),no
+G24.1,Distonia idiopatica familiar,no
+I27.0,Hipertension pulmonar primaria,no
+K74.3,Cirrosis biliar primaria,no
+N25.0,Osteodistrofia renal,no
+E23.0,Hipopituitarismo,no
+E25.0,Hiperplasia suprarrenal congenita,no
+E27.1,Insuficiencia adrenocortical primaria (Addison),no
+M32.9,Lupus eritematoso sistemico,no
+M33.0,Dermatomiositis juvenil,no
+G70.0,Miastenia gravis,no
+G35,Esclerosis multiple,no
