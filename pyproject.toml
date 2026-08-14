@@ -28,7 +28,9 @@ dev = [
     "mypy>=1.8",
     "Faker>=25.0",
 ]
-web = ["streamlit>=1.35"]
+# El adaptador web importa pandas y reportlab en el nivel de modulo, no de forma
+# perezosa: sin ellos `app.py` falla al arrancar. Van aqui, no en el nucleo.
+web = ["streamlit>=1.35", "pandas>=2.2", "reportlab>=4.0"]
 fhir = ["fhir.resources>=7.1"]
 pdf = ["reportlab>=4.0"]
 

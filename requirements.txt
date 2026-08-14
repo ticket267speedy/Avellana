@@ -1,0 +1,18 @@
+# Dependencias de ejecucion para el despliegue en Streamlit Community Cloud.
+#
+# Por que existe este archivo ademas de pyproject.toml:
+# Streamlit Cloud instala desde requirements.txt en la raiz del repositorio.
+# Aqui va SOLO lo que el adaptador web importa de verdad; el nucleo de dominio
+# sigue corriendo con libreria estandar sola y no necesita nada de esto.
+#
+# Verificado contra los imports reales de src/ (14-ago-2026):
+# unicos paquetes de terceros = streamlit, pandas, qrcode, reportlab, yaml.
+
+# Con techo de version mayor a proposito: el despliegue reinstala dependencias en
+# cada arranque, y una version 2.x publicada en mala fecha romperia la demo sin
+# que nadie haya tocado el codigo. Verificado con streamlit 1.61.1 y pandas 3.0.5.
+streamlit>=1.35,<2
+pandas>=2.2,<4
+PyYAML>=6.0,<7
+qrcode[pil]>=7.4,<9
+reportlab>=4.0,<5
