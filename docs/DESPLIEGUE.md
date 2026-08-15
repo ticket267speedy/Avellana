@@ -181,6 +181,60 @@ par de minutos: es el modelo transcribiendo de verdad en tu máquina.
 
 ---
 
+## 4.b Mostrar el modelo trabajando (modo demostración)
+
+Los doce documentos vienen con su transcripción ya hecha. Eso es lo que hace
+que la pantalla abra al instante y funcione sin modelo, pero tiene un efecto
+secundario: **el modelo queda invisible**. Quien mire la pantalla ve texto ya
+puesto y no tiene forma de saber que hay algo leyendo.
+
+En la pestaña de Digitalización hay un interruptor **«Modo demostración —
+ignorar las transcripciones guardadas»**. Con él marcado, los documentos
+aparecen como no leídos y hay que pulsar el botón y esperar al modelo delante
+de quien esté mirando.
+
+**No borra nada.** Vale solo para esa pestaña del navegador y no altera lo que
+ven los demás. Se descartó la alternativa de borrar los archivos cacheados:
+habría sido destructivo y compartido — un mentor abriendo la página dejaría la
+demo rota para todo el equipo.
+
+El botón «Volver a leer en vivo con el modelo», que aparece sobre un documento
+ya transcrito, sirve para lo mismo puntualmente. El modo demostración es para
+cuando se quiere que **toda** la pestaña se comporte así.
+
+---
+
+## 4.c El límite de los 100 segundos (HTTP 524)
+
+Un problema real que costó encontrar, documentado para que nadie lo repita.
+
+**Síntoma:** pulsar «leer en vivo» desde la aplicación desplegada terminaba en
+`OllamaNoDisponible ... HTTP Error 524`, aunque Ollama estuviese perfectamente
+y de hecho trabajando.
+
+**Causa:** Cloudflare corta con `524` toda petición cuyo origen tarde más de
+~100 s en emitir el primer byte. Una lectura de visión en CPU tarda ~150 s.
+
+**Lo que NO lo arregló:** poner Ollama en streaming (`"stream": true`). Fue lo
+primero que se probó y siguió dando 524. Con un modelo de visión el grueso del
+tiempo se va procesando la IMAGEN, antes del primer token: no había nada que
+transmitir todavía. El silencio no estaba en el transporte, estaba en el
+modelo.
+
+**Lo que sí:** la compuerta responde de inmediato y emite un salto de línea
+cada 10 s mientras Ollama piensa. Cloudflare ve bytes y mantiene la conexión.
+El relleno es inofensivo porque la respuesta es JSON por líneas y el lector ya
+se salta las líneas en blanco.
+
+**Verificado:** lectura completa por el túnel en **156 s**, muy por encima del
+límite, con el modelo descargado de memoria a propósito para forzar el peor
+caso.
+
+Consecuencia de diseño: **la lectura en vivo desde la nube exige pasar por la
+compuerta.** Apuntar el túnel directo a Ollama vuelve a dar 524.
+
+---
+
 ## 5. Lo que hay que saber del túnel
 
 **La URL cambia cada vez.** Un túnel rápido de Cloudflare genera un dominio

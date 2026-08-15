@@ -34,6 +34,7 @@ instalar nada.
 from __future__ import annotations
 
 import json
+import queue
 import threading
 import urllib.error
 import urllib.request
@@ -48,6 +49,11 @@ OLLAMA_POR_DEFECTO = "http://localhost:11434"
 TIMEOUT_LECTURA = 330.0
 TIMEOUT_SONDEO = 10.0
 RUTAS_RAPIDAS = ("/api/tags", "/api/ps", "/api/version")
+
+# Cada cuanto emitir un salto de linea mientras Ollama piensa, para que
+# Cloudflare no de la peticion por muerta. Su limite son ~100 s sin recibir
+# nada; 10 s deja margen de sobra sin llenar la respuesta de relleno.
+LATIDO_SEGUNDOS = 10.0
 
 
 class Interruptor:
@@ -213,6 +219,10 @@ def crear_manejador(
                 if self.path.startswith(RUTAS_RAPIDAS)
                 else TIMEOUT_LECTURA
             )
+            if not self.path.startswith(RUTAS_RAPIDAS):
+                self._con_latido(peticion, espera)
+                return
+
             try:
                 with urllib.request.urlopen(peticion, timeout=espera) as r:
                     self._responder(
@@ -222,9 +232,91 @@ def crear_manejador(
                     )
             except urllib.error.HTTPError as e:
                 self._responder(e.code, e.read(), "application/json")
+            except ConnectionAbortedError:
+                # Quien preguntaba se fue antes de la respuesta. No es un
+                # fallo de nadie y no hay a quien contarselo.
+                pass
             except Exception as e:  # noqa: BLE001 — Ollama caido o sin responder
                 cuerpo = json.dumps({"error": f"Ollama no responde: {e}"}).encode()
-                self._responder(502, cuerpo, "application/json")
+                try:
+                    self._responder(502, cuerpo, "application/json")
+                except ConnectionAbortedError:
+                    pass
+
+        def _trozo(self, datos: bytes) -> None:
+            """Un fragmento en codificacion `chunked`."""
+            self.wfile.write(f"{len(datos):X}\r\n".encode())
+            self.wfile.write(datos)
+            self.wfile.write(b"\r\n")
+            self.wfile.flush()
+
+        def _con_latido(self, peticion: urllib.request.Request, espera: float) -> None:
+            """Reenvia la lectura manteniendo la conexion viva mientras espera.
+
+            EL PROBLEMA, MEDIDO
+            Cloudflare corta con **HTTP 524** toda peticion cuyo origen tarde
+            mas de ~100 s en emitir el primer byte. Una lectura de vision en
+            esta maquina tarda ~150 s, asi que la lectura en vivo desde la
+            aplicacion desplegada moria siempre.
+
+            POR QUE NO BASTO PONER OLLAMA EN STREAMING
+            Fue lo primero que se probo, y siguio dando 524. Con un modelo de
+            vision, el grueso del tiempo se va en procesar la IMAGEN —la fase
+            de evaluacion del prompt— y eso ocurre ANTES del primer token. No
+            habia nada que transmitir todavia: el silencio no estaba en el
+            transporte, estaba en el modelo.
+
+            LO QUE SI FUNCIONA
+            La compuerta responde de inmediato y, mientras Ollama piensa, emite
+            un salto de linea cada pocos segundos. Cloudflare ve bytes y
+            mantiene la conexion; cuando Ollama arranca, se reenvia su flujo
+            de verdad.
+
+            El relleno es inofensivo por construccion: la respuesta de Ollama
+            en streaming es JSON por lineas, y `_reensamblar` en el lector ya
+            se salta las lineas en blanco. Un cliente que hable con esta
+            compuerta ve exactamente el mismo formato que hablando con Ollama,
+            con lineas vacias intercaladas.
+            """
+            self.send_response(200)
+            self.send_header("Content-Type", "application/x-ndjson")
+            self.send_header("Transfer-Encoding", "chunked")
+            self.end_headers()
+
+            cola: queue.Queue[bytes | None] = queue.Queue()
+
+            def traer() -> None:
+                try:
+                    with urllib.request.urlopen(peticion, timeout=espera) as r:
+                        while True:
+                            trozo = r.read(4096)
+                            if not trozo:
+                                break
+                            cola.put(trozo)
+                except Exception as e:  # noqa: BLE001
+                    # El estado HTTP ya se envio, asi que el fallo no puede ir
+                    # en el codigo de respuesta: viaja como una linea JSON con
+                    # `error`, que es lo que el lector sabe reconocer.
+                    cola.put(json.dumps({"error": str(e)}).encode() + b"\n")
+                finally:
+                    cola.put(None)
+
+            threading.Thread(target=traer, daemon=True).start()
+
+            try:
+                while True:
+                    try:
+                        item = cola.get(timeout=LATIDO_SEGUNDOS)
+                    except queue.Empty:
+                        self._trozo(b"\n")  # sigo aqui, no me cortes
+                        continue
+                    if item is None:
+                        break
+                    self._trozo(item)
+                self.wfile.write(b"0\r\n\r\n")
+                self.wfile.flush()
+            except ConnectionAbortedError:
+                pass
 
     return Manejador
 

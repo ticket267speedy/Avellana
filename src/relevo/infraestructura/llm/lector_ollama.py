@@ -41,6 +41,7 @@ import json
 import urllib.error
 import urllib.request
 from dataclasses import dataclass, field
+from typing import Any
 
 from relevo.dominio.puertos.lectura_documento import LectorDocumento
 from relevo.infraestructura.llm.extractor import a_base64
@@ -111,7 +112,24 @@ class LectorOllama(LectorDocumento):
             "model": self.modelo,
             "prompt": instruccion,
             "images": [a_base64(imagen)],
-            "stream": False,
+            # ── POR QUE STREAMING SI EL RESULTADO SE QUIERE ENTERO ─────────
+            # Con `stream: False`, Ollama calla durante toda la inferencia y
+            # suelta el texto de golpe al final. En local da igual. Detras de
+            # un tunel NO: Cloudflare corta con **HTTP 524** cualquier peticion
+            # cuyo origen tarde mas de ~100 s en empezar a responder, y una
+            # lectura de vision en CPU tarda ~150 s. La lectura en vivo desde
+            # la aplicacion desplegada moria siempre, y el error que llegaba
+            # era `OllamaNoDisponible`, que hacia pensar en Ollama caido cuando
+            # Ollama estaba perfectamente y a medio trabajo.
+            #
+            # El limite de Cloudflare es al PRIMER BYTE, no al total. En
+            # streaming Ollama emite el primer fragmento en un par de segundos
+            # y sigue emitiendo, asi que la conexion nunca queda muda y la
+            # peticion completa cuanto haga falta.
+            #
+            # Los fragmentos se reensamblan abajo: hacia fuera esta funcion
+            # sigue devolviendo el texto completo de una pieza.
+            "stream": True,
             # Pide al modelo no razonar antes de responder.
             #
             # LO QUE SE MIDIO: los Qwen3 son modelos de razonamiento y Ollama
@@ -148,7 +166,7 @@ class LectorOllama(LectorDocumento):
         )
         try:
             with urllib.request.urlopen(peticion, timeout=TIMEOUT_SEGUNDOS) as r:
-                return str(json.loads(r.read().decode("utf-8")).get("response", ""))
+                return _reensamblar(r)
         except urllib.error.URLError as exc:
             raise OllamaNoDisponible(
                 f"No se pudo hablar con Ollama en {self.host}. "
@@ -156,6 +174,40 @@ class LectorOllama(LectorDocumento):
                 f"'{self.modelo}' este descargado (`ollama pull {self.modelo}`). "
                 f"Detalle: {exc}"
             ) from exc
+
+
+def _reensamblar(respuesta: Any) -> str:
+    """Junta los fragmentos de una respuesta en streaming de Ollama.
+
+    En streaming, Ollama devuelve una linea de JSON por fragmento; cada una
+    trae un trozo del texto en `response`, y la ultima `done: true`.
+
+    Una linea ilegible se salta en vez de tumbar la lectura entera: perder un
+    fragmento degrada la transcripcion, y la transcripcion la revisa una
+    persona de todas formas. Abortar por eso desperdiciaria los dos minutos de
+    trabajo que ya se hicieron.
+    """
+    trozos: list[str] = []
+    for linea in respuesta:
+        # Las lineas en blanco son el latido de `compuerta.py`: relleno emitido
+        # mientras el modelo piensa, para que Cloudflare no corte la conexion.
+        if not linea.strip():
+            continue
+        try:
+            dato = json.loads(linea.decode("utf-8"))
+        except (ValueError, UnicodeDecodeError):
+            continue
+        # Un fallo que llega DENTRO del flujo, no como codigo HTTP: la
+        # compuerta ya envio el 200 antes de saber como acabaria. Se convierte
+        # en excepcion aqui mismo, porque devolver "" seria presentar un
+        # documento no leido como un documento leido y vacio — precisamente el
+        # fallo silencioso que este sistema existe para impedir.
+        if dato.get("error"):
+            raise OllamaNoDisponible(f"El modelo fallo a mitad: {dato['error']}")
+        trozos.append(str(dato.get("response", "")))
+        if dato.get("done"):
+            break
+    return "".join(trozos)
 
 
 class OllamaNoDisponible(RuntimeError):

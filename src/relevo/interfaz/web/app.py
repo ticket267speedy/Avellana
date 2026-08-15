@@ -937,18 +937,50 @@ with tab_whatsapp:
             ],
         )
 
-        # Número telefónico de prueba por defecto solicitado por el usuario: 975 864 664
-        telefono_defecto = "975864664"
+        # ── DE DONDE SALE ESTE NUMERO ──────────────────────────────────
+        # Del contacto preferente del paciente, cuando lo tiene. Antes
+        # estaba fijo en un numero de pruebas y el contacto real se
+        # calculaba y se tiraba, asi que la pantalla mostraba siempre el
+        # mismo telefono para todos los pacientes.
+        #
+        # Sigue siendo editable a proposito, y esa es la parte importante:
+        # la plantilla oficial de historia clinica del INSN NO TIENE campo
+        # de telefono (ver `dominio/objetos_valor/telefono.py`). El numero
+        # que hay en el sistema es el que alguien anoto cuando el paciente
+        # tenia tres anios. Quien llama tiene que poder corregirlo sobre la
+        # marcha, porque muchas veces sera lo primero que descubra.
+        NUMERO_DE_PRUEBAS = "975864664"
+        tel_paciente = contacto_wsp.telefono if contacto_wsp else None
+        if tel_paciente is not None:
+            telefono_defecto = tel_paciente.numero
+            procedencia = (
+                f"Contacto registrado: **{contacto_wsp.nombre}** "
+                f"({contacto_wsp.tipo.value})."
+                + (
+                    ""
+                    if tel_paciente.esta_vigente(fecha_evaluacion)
+                    else "  ⚠ Verificación caducada: confirma el número antes de usarlo."
+                )
+            )
+        else:
+            telefono_defecto = NUMERO_DE_PRUEBAS
+            procedencia = (
+                "Este paciente **no tiene teléfono registrado**. El número "
+                "mostrado es el de pruebas, no un dato del paciente."
+            )
+
         telefono_ingresado = st.text_input(
             "Número telefónico del familiar (Perú):",
             value=telefono_defecto,
-            help="Ingresa el número de 9 dígitos. Formato nacional e internacional aplicado automáticamente.",
+            key=f"tel_{pac_wsp.id}",
+            help="9 dígitos. El formato internacional se aplica automáticamente.",
         )
+        st.caption(procedencia)
 
         # Limpiar caracteres no numéricos
         telefono_limpio = "".join(c for c in telefono_ingresado if c.isdigit())
         if not telefono_limpio:
-            telefono_limpio = "975864664"
+            telefono_limpio = NUMERO_DE_PRUEBAS
 
         if tipo_mensaje == "Actualización de teléfono de contacto":
             cuerpo_mensaje = (
@@ -1393,6 +1425,34 @@ with tab_digital:
             "la pantalla funcione en el despliegue."
         )
 
+    # ── MODO DEMOSTRACIÓN ──────────────────────────────────────────────────
+    # Los doce documentos vienen con su transcripción ya hecha, que es lo que
+    # permite que la pantalla abra al instante y funcione sin modelo. El efecto
+    # secundario es que el modelo queda invisible: quien mire la pantalla ve
+    # texto ya puesto y no tiene forma de saber que hay algo leyendo.
+    #
+    # Con esto marcado, la pantalla se comporta como si nunca se hubiera leído
+    # nada: hay que pulsar el botón y esperar al modelo, delante de quien mire.
+    #
+    # NO borra nada. Es de esta sesión del navegador y no afecta a lo que ven
+    # los demás. Borrar los archivos habría sido destructivo y compartido: un
+    # mentor abriendo la página dejaría la demo rota para el resto.
+    _modo_demo = st.toggle(
+        "Modo demostración — ignorar las transcripciones guardadas",
+        key="modo_demo",
+        help=(
+            "Hace que los documentos aparezcan como no leídos para poder "
+            "mostrar al modelo trabajando en directo. No borra nada y solo "
+            "afecta a esta pestaña del navegador."
+        ),
+    )
+    if _modo_demo and not _estado_llm.activo:
+        st.warning(
+            "Modo demostración activo pero **la LLM no está activa**: los "
+            "documentos van a aparecer como no leídos y no habrá forma de "
+            "leerlos. Enciende la LLM o desmarca esta casilla."
+        )
+
     # ── SUBIR UN DOCUMENTO PROPIO ──────────────────────────────────────────
     # El corpus sirve para MEDIR: son documentos con verdad de referencia
     # conocida, y por eso la pantalla puede decir cuantos campos acerto el
@@ -1483,6 +1543,10 @@ with tab_digital:
         with col_est:
             if doc_id in _en_vivo:
                 resultado = _CORPUS.releer_texto(doc_id, _en_vivo[doc_id])
+            elif _modo_demo:
+                # Se ignora la caché a propósito: el documento se presenta
+                # como no leído para que el modelo tenga que trabajar.
+                resultado = None
             else:
                 resultado = _CORPUS.leer_cacheado(doc_id)
 
@@ -1494,7 +1558,16 @@ with tab_digital:
                 if _estado_llm.activo:
                     if st.button("Leer con el modelo ahora", type="primary"):
                         with st.spinner(f"Transcribiendo con {_estado_llm.modelo}…"):
-                            _CORPUS.leer_en_vivo(doc_id)
+                            lectura_nueva = _CORPUS.leer_en_vivo(
+                                # En modo demostración no se toca el archivo:
+                                # la caché tiene que seguir intacta para la
+                                # siguiente demostración, y para quien abra la
+                                # página sin el modo puesto.
+                                doc_id,
+                                cachear=not _modo_demo,
+                            )
+                        if _modo_demo:
+                            _en_vivo[doc_id] = lectura_nueva.documento.texto
                         st.rerun()
                 else:
                     st.caption(
