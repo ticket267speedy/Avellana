@@ -13,7 +13,7 @@ import base64
 import io
 import json
 import sys
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from urllib.parse import quote
 
@@ -39,13 +39,31 @@ from relevo.infraestructura.configuracion.cargador_yaml import (
     cargar_parametros_iut,
     cargar_politica_plazos,
 )
+from relevo.infraestructura.documentos.acta_digitalizacion import (
+    generar_acta_pdf_bytes,
+)
 from relevo.infraestructura.documentos.pdf_reportlab import (
     generar_pasaporte_pdf_bytes,
 )
 from relevo.infraestructura.fuentes.cohorte_sintetica import CohorteSintetica
+from relevo.infraestructura.configuracion.catalogo_establecimientos import (
+    buscar as buscar_establecimiento,
+)
+from relevo.infraestructura.configuracion.catalogo_establecimientos import (
+    existe_en_catalogo,
+)
 from relevo.infraestructura.llm.extraccion_por_reglas import (
     INSTRUCCION_TRANSCRIPCION,
     extraer_de_transcripcion,
+)
+from relevo.infraestructura.llm.validacion_captura import (
+    ETIQUETA_OTRO,
+    Estado,
+    Veredicto,
+    validar_celular,
+    validar_dni,
+    validar_fecha_nacimiento,
+    validar_numero_hc,
 )
 from relevo.infraestructura.llm.lector_ollama import LectorOllama
 from relevo.infraestructura.persistencia.repositorio_memoria import (
@@ -1023,52 +1041,261 @@ with tab_digital:
                 lectura = extraer_de_transcripcion(texto)
                 verdad = _verdad_de(doc_id)
 
+                st.markdown("##### Verificación campo por campo")
+                st.caption(
+                    "Corrige lo que haga falta mirando el escaneo de la izquierda. "
+                    "Ningún campo se da por bueno hasta que una persona lo confirma."
+                )
+
                 aciertos = revisiones = errores = 0
-                filas_html = []
+                editados: dict[str, tuple[str, str | None]] = {}
+                veredictos: dict[str, Veredicto] = {}
+                por_nombre = {c.nombre: c for c in lectura.campos}
+
+                def _pinta(nombre: str, v: Veredicto) -> None:
+                    """Feedback bajo el campo. El color dice qué hacer, no juzga."""
+                    if v.estado is Estado.VACIO:
+                        return
+                    tono = {
+                        Estado.VALIDO: "#22543d",
+                        Estado.INCOMPLETO: "#9c4221",
+                        Estado.ERRONEO: "#9b2c2c",
+                    }[v.estado]
+                    st.markdown(
+                        f"<div style='font-size:0.72rem;color:{tono};margin-top:-10px;"
+                        f"margin-bottom:6px;'>{v.estado.icono} {v.mensaje}</div>",
+                        unsafe_allow_html=True,
+                    )
+
+                def _leido(nombre: str) -> str:
+                    c = por_nombre.get(nombre)
+                    return (c.crudo or "—") if c else "—"
+
                 for campo in lectura.campos:
                     esperado = verdad.get(campo.nombre)
                     if esperado is None:
                         continue
-
                     if campo.valor is None:
-                        estado, color, fondo = "REVISAR", "#9c4221", "#feebc8"
-                        detalle = campo.motivo
                         revisiones += 1
                     elif str(campo.valor).strip() == str(esperado).strip():
-                        estado, color, fondo = "OK", "#22543d", "#c6f6d5"
-                        detalle = (
-                            f"corregido contra catálogo desde «{campo.ajuste.valor_leido}»"
-                            if campo.fue_corregido and campo.ajuste
-                            else ""
-                        )
                         aciertos += 1
                     else:
-                        estado, color, fondo = "ERROR", "#9b2c2c", "#fed7d7"
-                        detalle = f"el documento decía «{esperado}»"
                         errores += 1
 
-                    filas_html.append(
-                        f"<tr>"
-                        f"<td style='padding:6px 8px;font-size:0.8rem;color:#2d3748;'>{campo.nombre}</td>"
-                        f"<td style='padding:6px 8px;font-size:0.8rem;color:#1a202c;font-weight:600;'>"
-                        f"{campo.valor if campo.valor is not None else '—'}</td>"
-                        f"<td style='padding:6px 8px;'><span style='background:{fondo};color:{color};"
-                        f"padding:2px 8px;border-radius:10px;font-size:0.7rem;font-weight:700;'>{estado}</span></td>"
-                        f"<td style='padding:6px 8px;font-size:0.75rem;color:#718096;'>{detalle}</td>"
-                        f"</tr>"
+                col_izq, col_der = st.columns(2, gap="medium")
+
+                # ── Campos con regla propia ─────────────────────────────────
+                with col_izq:
+                    v_dni = st.text_input(
+                        "DNI del paciente", value=por_nombre["dni"].valor or "",
+                        key=f"d_dni_{doc_id}", placeholder="8 dígitos",
+                        help=f"el modelo leyó: {_leido('dni')}",
+                    )
+                    ver = validar_dni(v_dni)
+                    _pinta("dni", ver)
+                    editados["dni"], veredictos["dni"] = (v_dni, por_nombre["dni"].valor), ver
+
+                    v_cel = st.text_input(
+                        "Celular de contacto", value=por_nombre["celular"].valor or "",
+                        key=f"d_cel_{doc_id}", placeholder="9 dígitos, empieza en 9",
+                        help=f"el modelo leyó: {_leido('celular')}",
+                    )
+                    ver = validar_celular(v_cel)
+                    _pinta("celular", ver)
+                    editados["celular"], veredictos["celular"] = (v_cel, por_nombre["celular"].valor), ver
+
+                    v_hc = st.text_input(
+                        "N.º de historia clínica", value=por_nombre["numero_hc"].valor or "",
+                        key=f"d_hc_{doc_id}", placeholder="solo dígitos",
+                        help=f"el modelo leyó: {_leido('numero_hc')}",
+                    )
+                    ver = validar_numero_hc(v_hc)
+                    _pinta("numero_hc", ver)
+                    editados["numero_hc"], veredictos["numero_hc"] = (v_hc, por_nombre["numero_hc"].valor), ver
+
+                with col_der:
+                    # Calendario en vez de texto: una fecha tecleada admite
+                    # 31/02 y admite el formato americano. El calendario no.
+                    leida = por_nombre["fecha_nacimiento"].valor
+                    try:
+                        inicial = (
+                            datetime.strptime(leida, "%d/%m/%Y").date() if leida else None
+                        )
+                    except ValueError:
+                        inicial = None
+                    v_fnac = st.date_input(
+                        "Fecha de nacimiento",
+                        value=inicial,
+                        min_value=date(fecha_evaluacion.year - 100, 1, 1),
+                        max_value=fecha_evaluacion,
+                        format="DD/MM/YYYY",
+                        key=f"d_fn_{doc_id}",
+                        help=f"el modelo leyó: {_leido('fecha_nacimiento')}",
+                    )
+                    ver = validar_fecha_nacimiento(v_fnac, fecha_evaluacion)
+                    _pinta("fecha_nacimiento", ver)
+                    editados["fecha_nacimiento"] = (
+                        v_fnac.strftime("%d/%m/%Y") if v_fnac else "", leida
+                    )
+                    veredictos["fecha_nacimiento"] = ver
+
+                    for nom, etiq in (
+                        ("establecimiento_origen", "Establecimiento de origen"),
+                        ("establecimiento_destino", "Establecimiento de destino"),
+                    ):
+                        # Busqueda sobre el registro nacional (RENIPRESS), no
+                        # sobre una lista escrita a mano: un paciente puede venir
+                        # referido desde una posta de Ucayali, y obligar a marcar
+                        # "Otro" en ese caso llena la base de texto libre.
+                        leido_cat = por_nombre[nom].valor or ""
+                        consulta = st.text_input(
+                            f"{etiq} — busca en el registro nacional",
+                            value=leido_cat,
+                            key=f"d_{nom}_q_{doc_id}",
+                            placeholder="parte del nombre o la sigla (ej. INSN)",
+                            help=f"el modelo leyó: {_leido(nom)}",
+                        )
+                        candidatos = (
+                            buscar_establecimiento(consulta, limite=6) if consulta else ()
+                        )
+                        if candidatos:
+                            etiquetas = [e.etiqueta for e in candidatos] + [ETIQUETA_OTRO]
+                            sel = st.radio(
+                                f"coincidencias_{nom}",
+                                options=etiquetas,
+                                key=f"d_{nom}_sel_{doc_id}",
+                                label_visibility="collapsed",
+                            )
+                            if sel == ETIQUETA_OTRO:
+                                elegido = consulta
+                                st.markdown(
+                                    "<div style='font-size:0.72rem;color:#9c4221;"
+                                    "margin-top:-6px;'>⚠ no figura en RENIPRESS · "
+                                    "pendiente de conciliar</div>",
+                                    unsafe_allow_html=True,
+                                )
+                            else:
+                                elegido = next(
+                                    e.nombre for e in candidatos if e.etiqueta == sel
+                                )
+                                cod = next(
+                                    e.codigo for e in candidatos if e.etiqueta == sel
+                                )
+                                st.markdown(
+                                    f"<div style='font-size:0.72rem;color:#22543d;"
+                                    f"margin-top:-6px;'>✅ RENIPRESS {cod}</div>",
+                                    unsafe_allow_html=True,
+                                )
+                        else:
+                            elegido = consulta
+                            if consulta:
+                                st.markdown(
+                                    "<div style='font-size:0.72rem;color:#9c4221;"
+                                    "margin-top:-10px;'>⚠ sin coincidencias en RENIPRESS · "
+                                    "pendiente de conciliar</div>",
+                                    unsafe_allow_html=True,
+                                )
+                        editados[nom] = (elegido, leido_cat)
+                        veredictos[nom] = Veredicto(Estado.VALIDO)
+
+                # ── Campos de texto libre ───────────────────────────────────
+                col_ap1, col_ap2 = st.columns(2)
+                for col, nom, etiq in (
+                    (col_ap1, "apellido_paterno", "Apellido paterno"),
+                    (col_ap2, "apellido_materno", "Apellido materno"),
+                ):
+                    with col:
+                        val = st.text_input(
+                            etiq, value=por_nombre[nom].valor or "",
+                            key=f"d_{nom}_{doc_id}",
+                            help=f"el modelo leyó: {_leido(nom)}",
+                        )
+                        editados[nom] = (val, por_nombre[nom].valor)
+                        veredictos[nom] = Veredicto(Estado.VALIDO)
+
+                st.divider()
+                bloqueantes = [n for n, v in veredictos.items() if v.bloquea_emision]
+                incompletos = [
+                    n for n, v in veredictos.items() if v.estado is Estado.INCOMPLETO
+                ]
+                if bloqueantes:
+                    st.error(
+                        "No se puede emitir el acta: corrige "
+                        + ", ".join(f"**{b}**" for b in bloqueantes)
+                    )
+                elif incompletos:
+                    st.warning(
+                        "Campos a medio escribir: " + ", ".join(incompletos)
                     )
 
-                st.markdown(
-                    "<table style='width:100%;border-collapse:collapse;background:#ffffff;"
-                    "border:1px solid #cbd5e0;border-radius:6px;'>"
-                    "<tr style='background:#edf2f7;'>"
-                    "<th style='padding:8px;text-align:left;font-size:0.75rem;color:#4a5568;'>CAMPO</th>"
-                    "<th style='padding:8px;text-align:left;font-size:0.75rem;color:#4a5568;'>VALOR LEÍDO</th>"
-                    "<th style='padding:8px;text-align:left;font-size:0.75rem;color:#4a5568;'>ESTADO</th>"
-                    "<th style='padding:8px;text-align:left;font-size:0.75rem;color:#4a5568;'>OBSERVACIÓN</th>"
-                    "</tr>" + "".join(filas_html) + "</table>",
-                    unsafe_allow_html=True,
+                revisor = st.text_input(
+                    "Nombre de quien revisa (queda registrado en el acta):",
+                    key=f"rev_{doc_id}",
                 )
+                st.caption(
+                    "El sistema registra el nombre, la fecha y la hora, pero **no verifica "
+                    "la identidad**: eso exige credenciales de acceso o firma digital "
+                    "certificada (RENIEC). Pendiente para el piloto."
+                )
+                confirmar = st.button(
+                    "Confirmar digitalización y generar acta",
+                    type="primary",
+                    disabled=bool(bloqueantes) or not revisor.strip(),
+                    key=f"btn_acta_{doc_id}",
+                )
+
+                if confirmar:
+                    campos_acta = []
+                    for nombre, (valor_final, valor_leido) in editados.items():
+                        final = valor_final.strip()
+                        if not final:
+                            estado_acta = "VACIO"
+                        elif final != (valor_leido or ""):
+                            estado_acta = "CORREGIDO"
+                        else:
+                            estado_acta = "AUTOMATICO"
+                        campos_acta.append(
+                            {
+                                "nombre": nombre,
+                                "valor_final": final,
+                                "valor_leido": valor_leido or "",
+                                "estado": estado_acta,
+                            }
+                        )
+
+                    n_corr = sum(1 for c in campos_acta if c["estado"] == "CORREGIDO")
+                    n_auto = sum(1 for c in campos_acta if c["estado"] == "AUTOMATICO")
+                    momento = datetime.now()
+                    st.success(
+                        f"Digitalización confirmada por **{revisor}** el "
+                        f"{momento.strftime('%d/%m/%Y a las %H:%M')} · "
+                        f"{n_auto} campos aceptados de la lectura automática y "
+                        f"{n_corr} corregidos a mano."
+                    )
+                    pendientes = [
+                        c["nombre"]
+                        for c in campos_acta
+                        if c["nombre"].startswith("establecimiento")
+                        and c["valor_final"]
+                        and not existe_en_catalogo(c["valor_final"])
+                    ]
+                    if pendientes:
+                        st.warning(
+                            "Queda pendiente de conciliar contra RENAES: "
+                            + ", ".join(pendientes)
+                        )
+                    st.session_state[f"acta_{doc_id}"] = generar_acta_pdf_bytes(
+                        documento_id=doc_id, campos=campos_acta, revisor=revisor
+                    )
+
+                if st.session_state.get(f"acta_{doc_id}"):
+                    st.download_button(
+                        "Descargar acta de digitalización (PDF)",
+                        data=st.session_state[f"acta_{doc_id}"],
+                        file_name=f"acta_digitalizacion_{doc_id}.pdf",
+                        mime="application/pdf",
+                        width="stretch",
+                    )
 
                 total = aciertos + revisiones + errores
                 if total:
@@ -1196,3 +1423,4 @@ st.caption(
     "Sistema Relevo · Instituto Nacional de Salud del Niño San Borja. "
     "Diseñado conforme a la RM 214-2018-MINSA y la NT 018-MINSA/DGSP-V.01. Todo dato mostrado corresponde a simulación clínica controlada."
 )
+
