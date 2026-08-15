@@ -43,11 +43,68 @@ from relevo.infraestructura.documentos.pdf_reportlab import (
     generar_pasaporte_pdf_bytes,
 )
 from relevo.infraestructura.fuentes.cohorte_sintetica import CohorteSintetica
+from relevo.infraestructura.llm.extraccion_por_reglas import (
+    INSTRUCCION_TRANSCRIPCION,
+    extraer_de_transcripcion,
+)
+from relevo.infraestructura.llm.lector_ollama import LectorOllama
 from relevo.infraestructura.persistencia.repositorio_memoria import (
     RepositorioPacientesMemoria,
 )
 
 FECHA_HOY_DEFECTO = date(2026, 8, 14)
+
+# ═══════════════════════════════════════════════════════════════════════════
+# CORPUS DE DOCUMENTOS ESCANEADOS (pestaña de digitalización)
+#
+# La transcripción con el modelo tarda ~2 minutos por documento en CPU, así que
+# se cachea en disco. Una demo que obliga a esperar dos minutos delante de un
+# jurado no es una demo: la caché hace que la pantalla abra instantánea, y el
+# botón de leer en vivo queda para quien quiera ver el modelo trabajando.
+# ═══════════════════════════════════════════════════════════════════════════
+_RUTA_CORPUS = Path(__file__).resolve().parents[4] / "data" / "corpus"
+_CORPUS_DISPONIBLE = (_RUTA_CORPUS / "manifiesto.json").exists()
+
+
+def _muestras_corpus() -> list[dict[str, object]]:
+    datos = json.loads((_RUTA_CORPUS / "manifiesto.json").read_text(encoding="utf-8"))
+    return list(datos.get("muestras", []))
+
+
+def _variante_de(doc_id: str) -> str:
+    for m in _muestras_corpus():
+        if m.get("id") == doc_id:
+            return str(m.get("variante", ""))
+    return ""
+
+
+def _verdad_de(doc_id: str) -> dict[str, str]:
+    ruta = _RUTA_CORPUS / "verdad" / f"{doc_id}.json"
+    if not ruta.exists():
+        return {}
+    return dict(json.loads(ruta.read_text(encoding="utf-8")))
+
+
+def _transcripcion_de(doc_id: str) -> tuple[str | None, str]:
+    """Devuelve (texto, de_donde_salio). None si aún no se ha leído."""
+    ruta = _RUTA_CORPUS / "transcripciones" / f"{doc_id}.txt"
+    if ruta.exists():
+        return ruta.read_text(encoding="utf-8"), "lectura previa guardada en disco"
+    return None, ""
+
+
+def _transcribir_con_modelo(doc_id: str) -> str:
+    """Lee el documento con el modelo local y guarda el resultado.
+
+    Se propaga cualquier fallo de Ollama en vez de devolver texto vacío: un
+    documento sin leer y un documento leído como vacío son cosas distintas.
+    """
+    destino = _RUTA_CORPUS / "transcripciones"
+    destino.mkdir(parents=True, exist_ok=True)
+    imagen = (_RUTA_CORPUS / "imagenes" / f"{doc_id}.jpg").read_bytes()
+    texto = LectorOllama(modelo="glm-ocr").leer(imagen, INSTRUCCION_TRANSCRIPCION)
+    (destino / f"{doc_id}.txt").write_text(texto, encoding="utf-8")
+    return texto
 
 st.set_page_config(
     page_title="Relevo · Puente 18+ (INSN San Borja)",
@@ -338,12 +395,13 @@ st.markdown(
 # PESTAÑAS CLÍNICAS FORMALES
 # ═══════════════════════════════════════════════════════════════════════════
 
-tab_radar, tab_ficha, tab_whatsapp, tab_ciclo, tab_config = st.tabs(
+tab_radar, tab_ficha, tab_whatsapp, tab_ciclo, tab_digital, tab_config = st.tabs(
     [
         "Radar de Pacientes (Padrón)",
         "Ficha y Pasaporte 18+",
         "Avisos y Contacto Familiar",
         "Seguimiento y Cierre de Ciclo",
+        "Digitalización de Hoja de Referencia",
         "Criterios Clínicos e Interoperabilidad",
     ]
 )
@@ -916,7 +974,144 @@ with tab_ciclo:
 
 
 # ───────────────────────────────────────────────────────────────────────────
-# TAB 5: CRITERIOS CLÍNICOS E INTEROPERABILIDAD NACIONAL (SIN JSON/YAML EXPUESTO)
+# TAB 5: DIGITALIZACIÓN DE HOJA DE REFERENCIA
+#
+# El INSN lo lleva casi todo en papel. Esta pantalla es el punto de entrada:
+# un escaneo entra, y lo que sale NO es "los datos ya digitalizados" sino
+# "los datos, y cuáles no me creo". Esa segunda parte es el aporte.
+# ───────────────────────────────────────────────────────────────────────────
+with tab_digital:
+    st.markdown("#### Digitalización Asistida de Hoja de Referencia")
+    st.caption(
+        "Lectura automática de documentos escaneados con verificación en tres capas. "
+        "El procesamiento es local: ningún documento sale de esta máquina."
+    )
+
+    if not _CORPUS_DISPONIBLE:
+        st.warning(
+            "No hay corpus de documentos generado todavía. "
+            "Genera uno con:  `python -m relevo.interfaz.cli.generar_corpus --n 12`"
+        )
+    else:
+        muestras_corpus = _muestras_corpus()
+        col_sel, col_est = st.columns([2, 3], gap="large")
+
+        with col_sel:
+            doc_id = st.selectbox(
+                "Documento escaneado:",
+                options=[m["id"] for m in muestras_corpus],
+                format_func=lambda d: f"{d}  ·  {_variante_de(d)}",
+            )
+            ruta_img = _RUTA_CORPUS / "imagenes" / f"{doc_id}.jpg"
+            if ruta_img.exists():
+                st.image(str(ruta_img), caption=f"{doc_id}.jpg", width="stretch")
+
+        with col_est:
+            texto, origen = _transcripcion_de(doc_id)
+
+            if texto is None:
+                st.info(
+                    "Este documento aún no se ha leído. La transcripción con el modelo "
+                    "local tarda alrededor de dos minutos en CPU."
+                )
+                if st.button("Leer con el modelo ahora", type="primary"):
+                    with st.spinner("Transcribiendo con glm-ocr (local)…"):
+                        texto = _transcribir_con_modelo(doc_id)
+                    st.rerun()
+            else:
+                st.caption(f"Transcripción obtenida de: {origen}")
+                lectura = extraer_de_transcripcion(texto)
+                verdad = _verdad_de(doc_id)
+
+                aciertos = revisiones = errores = 0
+                filas_html = []
+                for campo in lectura.campos:
+                    esperado = verdad.get(campo.nombre)
+                    if esperado is None:
+                        continue
+
+                    if campo.valor is None:
+                        estado, color, fondo = "REVISAR", "#9c4221", "#feebc8"
+                        detalle = campo.motivo
+                        revisiones += 1
+                    elif str(campo.valor).strip() == str(esperado).strip():
+                        estado, color, fondo = "OK", "#22543d", "#c6f6d5"
+                        detalle = (
+                            f"corregido contra catálogo desde «{campo.ajuste.valor_leido}»"
+                            if campo.fue_corregido and campo.ajuste
+                            else ""
+                        )
+                        aciertos += 1
+                    else:
+                        estado, color, fondo = "ERROR", "#9b2c2c", "#fed7d7"
+                        detalle = f"el documento decía «{esperado}»"
+                        errores += 1
+
+                    filas_html.append(
+                        f"<tr>"
+                        f"<td style='padding:6px 8px;font-size:0.8rem;color:#2d3748;'>{campo.nombre}</td>"
+                        f"<td style='padding:6px 8px;font-size:0.8rem;color:#1a202c;font-weight:600;'>"
+                        f"{campo.valor if campo.valor is not None else '—'}</td>"
+                        f"<td style='padding:6px 8px;'><span style='background:{fondo};color:{color};"
+                        f"padding:2px 8px;border-radius:10px;font-size:0.7rem;font-weight:700;'>{estado}</span></td>"
+                        f"<td style='padding:6px 8px;font-size:0.75rem;color:#718096;'>{detalle}</td>"
+                        f"</tr>"
+                    )
+
+                st.markdown(
+                    "<table style='width:100%;border-collapse:collapse;background:#ffffff;"
+                    "border:1px solid #cbd5e0;border-radius:6px;'>"
+                    "<tr style='background:#edf2f7;'>"
+                    "<th style='padding:8px;text-align:left;font-size:0.75rem;color:#4a5568;'>CAMPO</th>"
+                    "<th style='padding:8px;text-align:left;font-size:0.75rem;color:#4a5568;'>VALOR LEÍDO</th>"
+                    "<th style='padding:8px;text-align:left;font-size:0.75rem;color:#4a5568;'>ESTADO</th>"
+                    "<th style='padding:8px;text-align:left;font-size:0.75rem;color:#4a5568;'>OBSERVACIÓN</th>"
+                    "</tr>" + "".join(filas_html) + "</table>",
+                    unsafe_allow_html=True,
+                )
+
+                total = aciertos + revisiones + errores
+                if total:
+                    c1, c2, c3 = st.columns(3)
+                    c1.metric("Capturados", f"{aciertos}/{total}")
+                    c2.metric("A revisión humana", f"{revisiones}/{total}")
+                    c3.metric("Error no detectado", f"{errores}/{total}")
+
+                st.markdown(
+                    "<div style='background:#edf2f7;border-left:4px solid #4a5568;"
+                    "padding:10px 14px;margin-top:12px;font-size:0.8rem;color:#2d3748;'>"
+                    "<strong>Cómo leer esta tabla.</strong> Un campo en "
+                    "<strong>REVISAR</strong> no es un fallo del sistema: es el sistema "
+                    "diciendo que no se cree lo que leyó, y pidiendo que una persona lo "
+                    "confirme. El único resultado malo es <strong>ERROR</strong> — un dato "
+                    "equivocado que pasó como bueno. Hoy, sin este sistema, todos los "
+                    "campos entran a REFCON tecleados a mano y sin ninguna verificación."
+                    "</div>",
+                    unsafe_allow_html=True,
+                )
+
+                with st.expander("Ver transcripción completa del documento"):
+                    st.text(texto[:4000])
+
+    st.markdown(
+        "<div style='background:#f7fafc;border:1px solid #cbd5e0;border-radius:6px;"
+        "padding:14px;margin-top:16px;'>"
+        "<div style='font-weight:700;color:#1a365d;font-size:0.9rem;'>Las tres verificaciones encadenadas</div>"
+        "<div style='font-size:0.82rem;color:#4a5568;margin-top:6px;line-height:1.6;'>"
+        "• <strong>Formato:</strong> un DNI de 7 dígitos o un celular que en realidad es "
+        "una fecha se rechazan solos.<br/>"
+        "• <strong>Catálogo:</strong> «NISN San Borja» supera cualquier formato, pero no "
+        "existe en el catálogo de establecimientos.<br/>"
+        "• <strong>Doble lectura:</strong> dos modelos distintos leen el mismo documento; "
+        "donde discrepan, el campo va a revisión. Es lo único que detecta un dígito "
+        "cambiado que deja un número válido."
+        "</div></div>",
+        unsafe_allow_html=True,
+    )
+
+
+# ───────────────────────────────────────────────────────────────────────────
+# TAB 6: CRITERIOS CLÍNICOS E INTEROPERABILIDAD NACIONAL (SIN JSON/YAML EXPUESTO)
 # ───────────────────────────────────────────────────────────────────────────
 with tab_config:
     st.markdown("#### Criterios Clínicos e Integración Nacional")
