@@ -7,6 +7,13 @@ data/
 salidas/
 *.pdf
 
+# ─── FUENTES DESCARGADAS ───
+# Las fuentes manuscritas del corpus se descargan, no se versionan:
+# `python -m relevo.interfaz.cli.descargar_fuentes` las trae de Google Fonts.
+# Son ~2 MB de binarios que se reconstruyen con un comando, y el repositorio no
+# es el sitio donde guardar dependencias que alguien mas ya distribuye.
+assets/
+
 # ─── SECRETOS ───
 .env
 .env.local
