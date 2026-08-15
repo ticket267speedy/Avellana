@@ -111,24 +111,45 @@ Basta con el Ollama de siempre, tal cual. **No hace falta tocar
 ollama list      # debe aparecer un modelo de vision (qwen3-vl:4b, glm-ocr…)
 ```
 
-### Paso 2 — Levantar el túnel
+### Paso 2 — Arrancar la compuerta
 
-Sin cuenta ni registro:
+La compuerta es un proxy minúsculo delante de Ollama con un **interruptor**.
+Existe porque prestar la LLM no debería ser todo o nada: quien pone el portátil
+tiene que poder cortar el grifo sin tumbar el túnel.
+
+```powershell
+python -m relevo.interfaz.cli.compuerta
+```
+
+Deja esa ventana abierta y abre **http://localhost:8787** en el navegador: hay
+un botón de encender y apagar.
+
+- **Encendida** → la página web dice «LLM ACTIVA» y puede leer documentos.
+- **Apagada** → responde `503` sin tocar Ollama. La página dice «LLM NO ACTIVA
+  — el servidor del modelo está caído» y sigue funcionando con las
+  transcripciones guardadas. Tu CPU no se entera.
+
+**Apagar y encender NO cambia la URL del túnel**, así que no hay que volver a
+tocar los secretos de Streamlit. Ese es el motivo de que exista la compuerta en
+vez de simplemente cerrar el túnel.
+
+También arranca apagada con `--cerrada`.
+
+### Paso 3 — Levantar el túnel
+
+Sin cuenta ni registro. **Apunta a la compuerta (8787), no a Ollama:**
 
 ```powershell
 winget install --id Cloudflare.cloudflared
-cloudflared tunnel --url http://localhost:11434 --http-host-header localhost:11434
+cloudflared tunnel --url http://localhost:8787
 ```
 
-**`--http-host-header` no es opcional.** Ollama rechaza con `403` cualquier
-petición cuya cabecera `Host` no reconozca, y un túnel las manda con el dominio
-`trycloudflare.com`. Esa bandera reescribe la cabecera a `localhost:11434`
-antes de entregar la petición, así que Ollama la ve como local y la acepta.
-
-Es preferible a abrir Ollama con `OLLAMA_HOST=0.0.0.0` y `OLLAMA_ORIGINS=*`:
-hace lo mismo para este caso, no obliga a reiniciar Ollama, y deja el servicio
-escuchando solo en la interfaz local — por el túnel entra, por la red de la
-cafetería no.
+> **Nota sobre el `403` de Ollama.** Si algún día apuntas el túnel directo a
+> Ollama saltándote la compuerta, hace falta
+> `--http-host-header localhost:11434`: Ollama rechaza con `403` toda petición
+> cuya cabecera `Host` no reconozca, y el túnel manda el dominio
+> `trycloudflare.com`. A través de la compuerta el problema no se da, porque
+> la compuerta hace su propia petición local a Ollama.
 
 Imprime una URL del tipo:
 
@@ -138,7 +159,7 @@ https://algo-aleatorio-aqui.trycloudflare.com
 
 Cópiala. **Deja esa ventana abierta**: si la cierras, el túnel muere.
 
-### Paso 3 — Declararla en los secretos de la app
+### Paso 4 — Declararla en los secretos de la app
 
 En `share.streamlit.io` → tu app → **Settings** → **Secrets**, pega:
 
@@ -148,7 +169,7 @@ RELEVO_OLLAMA_HOST = "https://algo-aleatorio-aqui.trycloudflare.com"
 
 Guarda. La app se reinicia sola en unos segundos.
 
-### Paso 4 — Comprobar
+### Paso 5 — Comprobar
 
 Abre la app, pestaña **Digitalización**. Arriba debe decir:
 
@@ -186,8 +207,9 @@ salir a un servicio externo.
 
 | Síntoma | Causa probable |
 |---|---|
-| "LLM no activa" con el túnel arriba | Falta `--http-host-header localhost:11434` en el comando del túnel. Ollama responde 403 al Host de Cloudflare. |
-| "LLM no activa" y `ollama list` funciona | El túnel se cayó, o la URL del secreto es la de un túnel anterior. Un túnel gratuito cambia de URL en cada arranque. |
+| "LLM no activa" y `localhost:11434` dice *Ollama is running* | Que Ollama corra en tu máquina no dice nada de lo que ve la nube. Comprueba, en este orden: (1) el secreto `RELEVO_OLLAMA_HOST` está guardado en Streamlit; (2) la compuerta está encendida en `localhost:8787`; (3) el túnel sigue vivo y su URL es la del secreto. |
+| Guardé el secreto y sigue en rojo | Comprueba que la URL del secreto sea la del túnel **actual**. Un túnel gratuito estrena URL en cada arranque, así que la de ayer ya no vale. |
+| "LLM no activa" con el túnel arriba y apuntando directo a Ollama | Falta `--http-host-header localhost:11434`. Ollama responde 403 al Host de Cloudflare. A través de la compuerta esto no pasa. |
 | Sigue igual tras cambiar el secreto | Reinicia la app desde el menú de Streamlit Cloud (*Reboot app*). |
 | La pestaña de digitalización sale vacía | No se subió `data/corpus_demo/`. Comprueba la excepción del `.gitignore`. |
 | El despliegue no toma los cambios | La app apunta a otra rama. `main` y `mvp-completo` están al mismo commit desde el 15-ago-2026. |
