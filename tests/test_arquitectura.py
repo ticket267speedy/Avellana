@@ -123,6 +123,120 @@ def test_la_aplicacion_solo_importa_dominio() -> None:
     )
 
 
+# ═══════════════════════════════════════════════════════════════════════════
+# La regla que faltaba: la fuga hacia AFUERA del hexagono
+#
+# Los tests de arriba vigilan que nada de adentro mire hacia afuera. Nadie
+# vigilaba lo contrario: que la interfaz salte por encima de la aplicacion y
+# hable directamente con los adaptadores.
+#
+# La regla se estaba rompiendo justo en la direccion que el test no miraba.
+# ═══════════════════════════════════════════════════════════════════════════
+
+INTERFAZ = RAIZ / "src" / "relevo" / "interfaz"
+
+# Unico archivo autorizado a nombrar implementaciones concretas: la composicion
+# de dependencias. Por definicion las conoce todas; ese es su trabajo.
+ARRANQUE_PERMITIDO = ("relevo/interfaz/arranque.py",)
+
+# Servicios de dominio que la interfaz no debe instanciar. Construir una
+# `CalculadoraIUT` desde una pantalla es hacer de capa de aplicacion sin serlo:
+# la pantalla pasa a saber COMO se prioriza en vez de QUE pedir.
+SERVICIOS_DE_DOMINIO = (
+    "CalculadoraIUT",
+    "ClasificadorCohorte",
+    "MaquinaCiclo",
+    "VerificadorExtraccion",
+)
+
+
+def _archivos_de_interfaz() -> list[Path]:
+    return [
+        p
+        for p in modulos_de(INTERFAZ)
+        if not p.as_posix().endswith(ARRANQUE_PERMITIDO)
+    ]
+
+
+@pytest.mark.bloqueante
+def test_la_interfaz_no_importa_infraestructura_directamente() -> None:
+    """La interfaz habla con casos de uso, no con adaptadores.
+
+    Si la pantalla sabe que hay que instanciar `CohorteSintetica` y cargar un
+    YAML, entonces cambiar Streamlit por FastAPI obliga a reescribir la
+    orquestacion entera — y la frase del pitch, "solo se cambia el adaptador",
+    deja de ser cierta.
+    """
+    infracciones: list[str] = []
+    for archivo in _archivos_de_interfaz():
+        for paquete in imports_de(archivo):
+            if paquete == "relevo.infraestructura":
+                infracciones.append(str(archivo.relative_to(RAIZ)))
+                break
+
+    assert not infracciones, (
+        f"{len(infracciones)} archivos de la interfaz importan infraestructura "
+        "directamente:\n  " + "\n  ".join(sorted(infracciones))
+        + "\n\nLa interfaz sabe COMO se hace en vez de QUE pedir. "
+        "Mover la orquestacion a un caso de uso en aplicacion/ y dejar la "
+        "composicion de dependencias en interfaz/arranque.py."
+    )
+
+
+@pytest.mark.bloqueante
+def test_la_interfaz_no_instancia_servicios_de_dominio() -> None:
+    """Instanciar un servicio de dominio desde la pantalla es saltarse la capa
+    de aplicacion, que es precisamente la que deberia orquestarlo."""
+    infracciones: list[str] = []
+    for archivo in _archivos_de_interfaz():
+        arbol = ast.parse(archivo.read_text(encoding="utf-8"), filename=str(archivo))
+        for nodo in ast.walk(arbol):
+            if not isinstance(nodo, ast.ImportFrom) or not nodo.module:
+                continue
+            if not nodo.module.startswith("relevo.dominio.servicios"):
+                continue
+            traidos = [a.name for a in nodo.names if a.name in SERVICIOS_DE_DOMINIO]
+            if traidos:
+                infracciones.append(
+                    f"{archivo.relative_to(RAIZ)}: {', '.join(sorted(traidos))}"
+                )
+
+    assert not infracciones, (
+        f"{len(infracciones)} archivos de la interfaz instancian servicios de "
+        "dominio:\n  " + "\n  ".join(sorted(infracciones))
+        + "\n\nEsos servicios los orquesta un caso de uso, no una pantalla."
+    )
+
+
+def test_la_aplicacion_no_es_vestigial() -> None:
+    """La orquestacion vive en `aplicacion/`, no en el adaptador de entrada.
+
+    No mide calidad: mide donde esta el peso. Una interfaz mucho mas grande que
+    la capa de aplicacion significa que se la comio, y entonces la logica no se
+    puede probar sin levantar un navegador.
+
+    El umbral de 3:1 es generoso a proposito — una interfaz siempre tiene mas
+    lineas por el maquetado. Lo que se vigila es el orden de magnitud.
+    TODO: bajar a 2:1 cuando A2 este terminado.
+    """
+    def lineas(carpeta: Path) -> int:
+        return sum(
+            len(p.read_text(encoding="utf-8").splitlines()) for p in modulos_de(carpeta)
+        )
+
+    lineas_interfaz = lineas(INTERFAZ)
+    lineas_aplicacion = lineas(APLICACION)
+    assert lineas_aplicacion > 0, "No hay capa de aplicacion"
+
+    razon = lineas_interfaz / lineas_aplicacion
+    assert razon <= 3.0, (
+        f"La interfaz tiene {lineas_interfaz} lineas y la aplicacion "
+        f"{lineas_aplicacion}: razon {razon:.1f}:1.\n"
+        "La orquestacion se mudo al adaptador de entrada. Extraer casos de uso "
+        "a aplicacion/ hasta bajar de 3:1."
+    )
+
+
 def test_el_dominio_se_importa_sin_dependencias_instaladas() -> None:
     """Comprobacion complementaria: que los modulos carguen de verdad.
 
