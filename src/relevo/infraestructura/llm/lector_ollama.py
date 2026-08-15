@@ -98,6 +98,24 @@ class LectorOllama:
             "prompt": instruccion,
             "images": [a_base64(imagen)],
             "stream": False,
+            # Sin razonamiento previo. MEDIDO, no supuesto:
+            #
+            # Los Qwen3 son modelos de razonamiento. Ollama devuelve ese
+            # razonamiento en un campo `thinking` aparte de `response`, y ambos
+            # salen del MISMO presupuesto de `num_predict`. Con el prompt largo
+            # de `construir_instruccion` —catalogo de campos mas glosario de
+            # abreviaturas— el modelo gastaba los 2048 tokens enteros pensando
+            # y devolvia `response` vacio: cuatro minutos para nada, y todos
+            # los campos a null sin que se viera por que.
+            #
+            # Con `think: false` el mismo modelo responde el JSON pedido en
+            # unos 15 segundos. Los modelos que no razonan ignoran este campo.
+            #
+            # Y NO se usa `thinking` como respuesta de repuesto aunque venga
+            # lleno: es el borrador en voz alta del modelo, no su conclusion.
+            # Sacar un dato clinico de ahi seria justo la clase de invencion
+            # que este sistema existe para impedir.
+            "think": False,
             "options": {
                 "temperature": self.temperatura,
                 "num_predict": 2048,
