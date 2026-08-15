@@ -22,6 +22,29 @@ y cómo hacer que el modelo de lectura funcione **en vivo** desde esa URL.
 
 ---
 
+## 1.b Por qué el modelo va a CPU y no a GPU
+
+Medido en el portátil del equipo (AMD Radeon 780M integrada):
+
+```
+NAME              SIZE      PROCESSOR
+glm-ocr:latest    2.5 GB    100% CPU
+```
+
+No es una limitación de los modelos de lenguaje en general. Ollama descarga
+capas a la GPU por dos caminos: **CUDA** en tarjetas NVIDIA y **ROCm** en AMD.
+La 780M es una iGPU `gfx1103`, que no está entre los targets que ROCm soporta
+oficialmente en Windows, así que Ollama no tiene ruta de aceleración y cae a
+CPU. De ahí los ~150 segundos por documento.
+
+Existe un rodeo conocido —forzar `HSA_OVERRIDE_GFX_VERSION=11.0.2` para que
+ROCm trate a la 780M como una tarjeta soportada— pero es experimental, puede
+colgar el driver, y en una iGPU que comparte memoria con el sistema la ganancia
+no está garantizada. **No se ha aplicado.** La caché de transcripciones existe
+precisamente para que la lentitud no se note en la demo.
+
+---
+
 ## 2. Por qué el modelo NO puede correr en la nube
 
 Conviene entenderlo antes de intentar arreglarlo por el camino equivocado.
@@ -79,24 +102,13 @@ dónde encontrarlo. Es gratis y no requiere servidor.
 Streamlit Cloud  ──HTTPS──►  túnel Cloudflare  ──►  tu PC: Ollama + qwen3-vl:4b
 ```
 
-### Paso 1 — Arrancar Ollama abierto al túnel
+### Paso 1 — Tener Ollama corriendo
 
-Ollama por defecto solo escucha en `127.0.0.1` y **rechaza peticiones cuya
-cabecera `Host` no reconoce**. Un túnel las manda con el dominio del túnel, así
-que sin estas dos variables devuelve `403` y parecerá que no está corriendo.
-
-En PowerShell, **en la ventana donde vas a arrancar Ollama**:
+Basta con el Ollama de siempre, tal cual. **No hace falta tocar
+`OLLAMA_HOST` ni `OLLAMA_ORIGINS`** — ver la nota al final del paso 2.
 
 ```powershell
-$env:OLLAMA_HOST = "0.0.0.0:11434"
-$env:OLLAMA_ORIGINS = "*"
-ollama serve
-```
-
-Comprueba que el modelo está descargado, en otra ventana:
-
-```powershell
-ollama list      # debe aparecer qwen3-vl:4b
+ollama list      # debe aparecer un modelo de vision (qwen3-vl:4b, glm-ocr…)
 ```
 
 ### Paso 2 — Levantar el túnel
@@ -105,8 +117,18 @@ Sin cuenta ni registro:
 
 ```powershell
 winget install --id Cloudflare.cloudflared
-cloudflared tunnel --url http://localhost:11434
+cloudflared tunnel --url http://localhost:11434 --http-host-header localhost:11434
 ```
+
+**`--http-host-header` no es opcional.** Ollama rechaza con `403` cualquier
+petición cuya cabecera `Host` no reconozca, y un túnel las manda con el dominio
+`trycloudflare.com`. Esa bandera reescribe la cabecera a `localhost:11434`
+antes de entregar la petición, así que Ollama la ve como local y la acepta.
+
+Es preferible a abrir Ollama con `OLLAMA_HOST=0.0.0.0` y `OLLAMA_ORIGINS=*`:
+hace lo mismo para este caso, no obliga a reiniciar Ollama, y deja el servicio
+escuchando solo en la interfaz local — por el túnel entra, por la red de la
+cafetería no.
 
 Imprime una URL del tipo:
 
@@ -164,8 +186,8 @@ salir a un servicio externo.
 
 | Síntoma | Causa probable |
 |---|---|
-| "Sin modelo alcanzable" con el túnel arriba | Falta `OLLAMA_ORIGINS=*`. Ollama responde 403 al Host del túnel. |
-| "Sin modelo alcanzable" y `ollama list` funciona | Falta `OLLAMA_HOST=0.0.0.0:11434`. Solo escucha en localhost. |
+| "LLM no activa" con el túnel arriba | Falta `--http-host-header localhost:11434` en el comando del túnel. Ollama responde 403 al Host de Cloudflare. |
+| "LLM no activa" y `ollama list` funciona | El túnel se cayó, o la URL del secreto es la de un túnel anterior. Un túnel gratuito cambia de URL en cada arranque. |
 | Sigue igual tras cambiar el secreto | Reinicia la app desde el menú de Streamlit Cloud (*Reboot app*). |
 | La pestaña de digitalización sale vacía | No se subió `data/corpus_demo/`. Comprueba la excepción del `.gitignore`. |
 | El despliegue no toma los cambios | La app apunta a otra rama. `main` y `mvp-completo` están al mismo commit desde el 15-ago-2026. |

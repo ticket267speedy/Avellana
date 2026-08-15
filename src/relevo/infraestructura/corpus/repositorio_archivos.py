@@ -35,48 +35,58 @@ NOMBRE_CORPUS_COMPLETO = "corpus"
 NOMBRE_CORPUS_DEMO = "corpus_demo"
 
 
-def elegir_ruta_corpus(raiz_datos: Path) -> tuple[Path, bool]:
-    """(ruta, es_muestra_parcial) segun que corpus haya generado o versionado."""
+def elegir_ruta_corpus(raiz_datos: Path) -> Path:
+    """El corpus completo si esta generado; si no, el versionado."""
     completo = raiz_datos / NOMBRE_CORPUS_COMPLETO
     if (completo / "manifiesto.json").exists():
-        return completo, False
-    return raiz_datos / NOMBRE_CORPUS_DEMO, True
+        return completo
+    return raiz_datos / NOMBRE_CORPUS_DEMO
 
 
 class CorpusEnArchivos(RepositorioCorpus):
     """El corpus tal como quedo en disco."""
 
-    def __init__(self, raiz: Path, es_muestra_parcial: bool = False) -> None:
+    def __init__(self, raiz: Path) -> None:
         self._raiz = raiz
-        self._parcial = es_muestra_parcial
 
     @classmethod
     def descubrir(cls, raiz_datos: Path) -> CorpusEnArchivos:
-        """Elige entre el corpus completo y la muestra versionada."""
-        ruta, parcial = elegir_ruta_corpus(raiz_datos)
-        return cls(ruta, es_muestra_parcial=parcial)
+        """Elige entre el corpus completo y el versionado."""
+        return cls(elegir_ruta_corpus(raiz_datos))
 
     @property
     def disponible(self) -> bool:
         """False cuando no se ha generado ningun corpus todavia."""
         return (self._raiz / "manifiesto.json").exists()
 
-    @property
-    def es_muestra_parcial(self) -> bool:
-        # Solo tiene sentido avisar de que es parcial si de hecho hay algo.
-        return self._parcial and self.disponible
-
-    def muestras(self) -> Sequence[MuestraCorpus]:
+    def _manifiesto(self) -> dict[str, object]:
         if not self.disponible:
-            return ()
-        datos = json.loads(
+            return {}
+        crudo = json.loads(
             (self._raiz / "manifiesto.json").read_text(encoding="utf-8")
         )
+        return dict(crudo)
+
+    @property
+    def es_muestra_parcial(self) -> bool:
+        """Lo declara el propio manifiesto.
+
+        No se deduce de la carpeta: el corpus versionado empezo siendo 4 de 12
+        documentos y luego paso a llevarlos todos. Deducirlo del nombre del
+        directorio habria dejado a la pantalla avisando de una muestra parcial
+        que ya no lo era.
+        """
+        return bool(self._manifiesto().get("parcial", False))
+
+    def muestras(self) -> Sequence[MuestraCorpus]:
+        datos = self._manifiesto()
+        if not datos:
+            return ()
         return tuple(
             MuestraCorpus(
                 id=str(m.get("id", "")), variante=str(m.get("variante", ""))
             )
-            for m in datos.get("muestras", [])
+            for m in list(datos.get("muestras", []) or [])
         )
 
     def imagen(self, documento_id: str) -> bytes:

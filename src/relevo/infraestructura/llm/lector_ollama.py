@@ -211,16 +211,21 @@ def _timeout_sondeo(host: str) -> int:
     return 5 if es_local else 15
 
 
-def verificar_disponibilidad(host: str = "http://localhost:11434") -> list[str]:
+def verificar_disponibilidad(
+    host: str = "http://localhost:11434", timeout: float | None = None
+) -> list[str]:
     """Modelos descargados en Ollama. Lista vacia si no responde.
 
     Se usa al arrancar la interfaz para elegir el mejor lector disponible en vez
     de fallar a mitad de la demo.
+
+    `timeout` se pasa explicito cuando el sondeo es periodico: la pantalla
+    consulta el estado cada pocos segundos y no puede permitirse bloquearse el
+    tiempo largo que si tiene sentido antes de una lectura.
     """
+    espera = _timeout_sondeo(host) if timeout is None else timeout
     try:
-        with urllib.request.urlopen(
-            f"{host}/api/tags", timeout=_timeout_sondeo(host)
-        ) as r:
+        with urllib.request.urlopen(f"{host}/api/tags", timeout=espera) as r:
             datos = json.loads(r.read().decode("utf-8"))
         return [m["name"] for m in datos.get("models", [])]
     except Exception:  # noqa: BLE001 — sondeo, cualquier fallo es "no hay"
@@ -278,7 +283,7 @@ def familia_de(modelo: str) -> str:
 
 
 def elegir_lectores(
-    host: str = "http://localhost:11434",
+    host: str = "http://localhost:11434", timeout: float | None = None
 ) -> tuple[object, object | None]:
     """Elige el mejor par (principal, contraste) entre lo que hay instalado.
 
@@ -290,7 +295,7 @@ def elegir_lectores(
     Si no hay nada, devuelve `LectorNulo` y el sistema entra en modo manual en
     vez de romperse.
     """
-    disponibles = verificar_disponibilidad(host)
+    disponibles = verificar_disponibilidad(host, timeout=timeout)
     if not disponibles:
         return LectorNulo(), None
 

@@ -1,0 +1,76 @@
+PERU · Ministerio de Salud
+HOJA DE REFERENCIA
+
+1.- DATOS GENERALES
+
+Fecha: 14/08/2026
+Hora: 12:16
+Asegurado: ___
+Fecha de Nacimiento: ___
+Tipo de Usuario: ___
+DN: ___
+Celular: 02/01/2008
+Establecimiento de origen: ___
+Establecimiento destino: Hospital Daniel Alcides Carrion
+A.M.N., San Borja
+
+2.- IDENTIFICACION DEL USUARIO
+
+N° Historia Clínica: 4.276.5
+Apellido Paterno: Ninausanca
+Apellido Materno: Flores
+Nombres: Juan Diego
+Edad anlos: 18
+Edad meses: 11
+Dirección: Distrito: Ate
+Departamento:
+
+3.- RESUMEN DE HISTORIA CLINICA
+
+Anamnesis:
+Paciente en control por consultorio externo deode loa 4 años. Refiere sintomatología persistente y necesidad de continuar seguimiento especializado.
+
+T*: ___
+P.A.: 103/77
+F.R.: 25
+F.C.: 43
+Peso: 64,8
+
+Examen finalo: ___
+Regular estado general, hidratado, ventilando eapontamente. Abdomen blando depresible.
+
+Examenes Auxiliares:
+Hemograma dentro de parametro. De adjuntan resultados de laboratorio e imagenes.
+
+Diagnostico 1:
+Diagnostico 2:
+Artrius idiopathica juvenil poliarticular
+Diagnostico 3:
+CIE-10 diagnostico 1:
+CIE-10 diagnostico 2:
+CIE-10 diagnostico 3:
+
+Tratamiento:
+Anulina glargina 17 Ubicuna. Anulina liopro según conté de carbokidratos.
+
+4.- DATOS DE LA REFERENCIA
+
+Fecha en que sera atendido: ___
+Motivo de Referencia:
+Noviembre 2026
+Noviembre lo atendera:
+Continuidad de tratamiento
+Dr. Cusi
+
+Especialidad de Destino:
+Dermatitis
+Condicion al inicio del traslado:
+Estable
+
+Responsable de la referencia:
+Persona que recibe:
+
+Fecha de recepcion:
+
+Condiciones del Paciente a la llegada al Establecimiento Destino
+Copias: Original SIS · EE.SS. Destino (1a) · EE.SS. Destino (2a) · SRCR (3a copia)

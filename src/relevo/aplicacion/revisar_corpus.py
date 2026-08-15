@@ -25,6 +25,7 @@ from relevo.dominio.puertos.corpus import MuestraCorpus, RepositorioCorpus
 
 ORIGEN_CACHE = "lectura previa guardada en disco"
 ORIGEN_VIVO = "lectura en vivo del modelo"
+ORIGEN_SUBIDA = "documento subido y leido en vivo"
 
 
 @dataclass(frozen=True, slots=True)
@@ -43,7 +44,17 @@ class LecturaDeCorpus:
 
     @property
     def fue_en_vivo(self) -> bool:
-        return self.origen == ORIGEN_VIVO
+        return self.origen in (ORIGEN_VIVO, ORIGEN_SUBIDA)
+
+    @property
+    def hay_verdad(self) -> bool:
+        """False en un documento traido por la persona.
+
+        Sin valores correctos conocidos no se puede medir el acierto, solo
+        revisar. La pantalla deja de mostrar el marcador de exactitud en vez de
+        inventarse un denominador.
+        """
+        return bool(self.verdad)
 
 
 class RevisarCorpus:
@@ -119,4 +130,49 @@ class RevisarCorpus:
             documento=self._digitalizar.desde_texto(documento_id, texto),
             verdad=self._corpus.verdad(documento_id),
             origen=origen,
+        )
+
+
+class RevisarSubida:
+    """Un documento que trae la persona, no el corpus.
+
+    POR QUE ES UNA CLASE APARTE Y NO UN METODO DE `RevisarCorpus`
+    No hay repositorio detras: la imagen llega de un formulario y no se guarda
+    en ninguna parte. Y sobre todo, no hay verdad de referencia — nadie sabe
+    que dice ese papel salvo quien lo esta mirando.
+
+    Esa diferencia importa mas de lo que parece. Sobre el corpus, la pantalla
+    puede decir "el modelo acerto 31 de 37 campos", porque hay con que
+    comparar. Sobre un documento subido, esa cifra no existe. Mezclar los dos
+    casos en la misma clase invitaria a mostrar un porcentaje inventado.
+
+    Comparte el modulo con `RevisarCorpus` porque comparte el objeto de
+    transporte, y separarlos obligaria a importar el DTO desde el otro lado.
+    """
+
+    def __init__(self, digitalizar: DigitalizarDocumento) -> None:
+        self._digitalizar = digitalizar
+
+    def leer(self, nombre: str, imagen: bytes) -> LecturaDeCorpus:
+        """Ejecuta el modelo sobre la imagen subida.
+
+        No cachea nada en disco: el documento es de quien lo subio, y este
+        sistema no guarda documentos que no le pertenecen.
+        """
+        return LecturaDeCorpus(
+            documento=self._digitalizar.ejecutar(nombre, imagen),
+            verdad={},
+            origen=ORIGEN_SUBIDA,
+        )
+
+    def releer_texto(self, nombre: str, texto: str) -> LecturaDeCorpus:
+        """Recompone la lectura sin volver a llamar al modelo.
+
+        Streamlit re-ejecuta el script en cada pulsacion; sin esto, corregir
+        una casilla costaria otra transcripcion completa.
+        """
+        return LecturaDeCorpus(
+            documento=self._digitalizar.desde_texto(nombre, texto),
+            verdad={},
+            origen=ORIGEN_SUBIDA,
         )

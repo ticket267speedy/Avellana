@@ -1,0 +1,74 @@
+PERU · Ministerio de Salud
+HOJA DE REFERENCIA
+Disa
+Lotes
+Numero
+
+1.- DATOS GENERALES
+
+Fecha: 14/08/2026
+Hora: 17:30
+Tipo de seguro: SIS
+Establecimiento de origen: Hospital Regional de UCAYAU
+Establecimiento destino: INSN SAN BORJA
+Asegurado: 73559360
+Fecha de Nacimiento: 09/06/2009
+Celular: 961967503
+
+2.- IDENTIFICACION DEL USUARIO
+
+N° Historia Clínica: 88098
+Apellido Paterno: FICONA
+Apellido Materno: Cruz
+Nombres: Juan Diego
+Edad anios: 17
+Edad meses: 9
+Dirección: Distrito: San Juan
+Departamento: Huanuco
+
+3.- RESUMEN DE HISTORIA CLINICA
+
+Anamnesis:
+Acude por control programado. Madre refiere adherencia irregular al tratamiento en los últimos 5 meses por dificultad para acudir a citas.
+T°: 373
+P.A.: 116/56
+F.R.: 17
+F.C.: 102
+Peso: 53.4
+RegULAR ESTADO GENERAL, HIDRATADO, VENTILANDO ESPONTANEAMENTE. ABDOMEN BLANDO DEPRESIBLE.
+
+Examen físico:
+Hemograma dentro de parametros. Se adjuntan resultados de laboratorio e imágenes.
+
+Diagnostico 1:
+PATALISIS CEREBRAL NO ESPECIFICADA
+
+Diagnostico 2:
+CIE-10 diagnostico 2:
+
+Diagnostico 3:
+CIE-10 diagnostico 3:
+
+Tratamiento:
+Hidroxiurea 15 mg/kg/día. Acido fólico 5 mg/día.
+
+4.- DATOS DE LA REFERENCIA
+
+Fecha en que sera atendido: 15/09/2026
+Motivo de Referencia:
+Transicion A SERVICIO DE ADULTOS
+Dr. Huaman
+
+Especialidad de Destino:
+MEDICINA del traslado:
+ESTABLE
+
+Responsable de la referencia:
+DRA FLORES
+
+Persona que recibe:
+42734
+
+Fecha de recepcion:
+
+Condiciones del Paciente a la llegada al Establecimiento Destino

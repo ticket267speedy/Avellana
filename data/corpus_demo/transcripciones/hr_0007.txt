@@ -1,0 +1,78 @@
+1.- DATOS GENERALES
+
+Fecha: 14/08/2026
+Hora: 10:30
+Tipo de seguro: EsSalud
+Establecimiento de origen: Hospital Regional de Loreto
+Establecimiento destino: INSN San Borja
+
+Fecha de Nacimiento: 30/12/2011
+Celular: 933759888
+
+2.- IDENTIFICACION DEL USUARIO
+
+N° Historia Clínica: 74063
+
+Apellido Paterno: Zapata
+Apellido Materno: Paredes
+Nombres: Ana Lucia
+Sexo: M
+Edad anlos: 14
+Edad meses: 7
+Dirección: Calle Bolognesi zor
+Distrito: San Juan
+Departamento: Puno
+
+3.- RESUMEN DE HISTORIA CLINICA
+
+Anamnesis:
+Acude por control programado. Madre refiere adherencia irregular al tratamiento en los últimos 4 meses por dificultad para acudir a citas.
+
+T*: 379
+P.A.: 94/77
+F.R.: 16
+F.C.: 80
+Peso: 574
+
+Examen físico:
+Regular estado general, hidratado, ventilando espontaneamente. Abdomen blando depresible.
+
+Examenes Auxiliares:
+Hemograma dentro de parametros. Se adjuntan resultados de laboratorio e imágenes.
+
+Diagnostico 1:
+Lupus eritematoso sistemico
+
+Diagnostico 2:
+Paralisis cerebral no especificada
+
+Diagnostico 3:
+
+Tratamiento:
+Dornasa alfa 2.5 mg nebulizada e/2.4h. Enzimas pancreaticas con cada comida
+
+4.- DATOS DE LA REFERENCIA
+
+Fecha en que sera atendido: 09/10/2026
+Nombre de quien lo atendera: Dr. Mamani
+
+Motivo de Referencia:
+Evaluacion por especialidad
+
+Especialidad de Destino:
+Pediatria
+
+Condicion al inicio del traslado:
+Estable
+
+Responsable de la referencia:
+Dra. Aquirre
+
+Colegiata del responsable:
+27633
+
+Persona que recibe:
+
+Fecha de recepcion:
+
+Condiciones del Paciente a la llegada al Establecimiento Destino

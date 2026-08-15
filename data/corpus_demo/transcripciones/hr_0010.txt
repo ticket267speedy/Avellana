@@ -1,0 +1,85 @@
+PERU · Ministerio de Salud
+HOJA DE REFERENCIA
+Disa
+Lotes
+Numero
+
+1.- DATOS GENERALES
+
+Fecha: 14/08/2026
+Hora: 15:15
+Tipo de seguro: SIS
+Asegurado: 76291136
+Fecha de Nacimiento: 27/01/2012
+Cellular: 972490475
+Establecimiento de origen: Hospital Hipolito Unanue
+Establecimiento destino: INSN San Borja
+
+2.- IDENTIFICACION DEL USUARIO
+
+N° Historia Clínica: 71261
+Apellido Paterno: Ramos
+Apellido Materno: Aquirre
+Nombres: Rosa Elena
+Sexo: M
+Edad años: 14
+Edad meses: 6
+Dirección: Jr. Las Palmeras 185
+Distrito: El Tambo
+Departamento: Piura
+
+3.- RESUMEN DE HISTORIA CLINICA
+
+Anamnesis:
+Paciente con diagnóstico establecido desde la infancia, en seguimiento multidisciplinario. Se solicita continuidad de atención en servicio de adultos.
+
+T°: 38.0
+P.A.: 102/62
+F.R.: 27
+F.C.: 84
+Peso: 57.7
+
+Examen físico:
+Regular estado general, hidratado, ventilando espontaneamente. Abdomen blando depresible.
+
+Examen Auxiliares:
+Hemograma dentro de parametros. Se adjuntan resultados de laboratorio e imagenes.
+
+Diagnostico 1:
+Fibrosis quistica con manifestaciones pulmonares
+Diagnostico 2:
+Enfermedad renal cronica estadio S
+Diagnostico 3:
+
+CIE-10 diagnostico 1:
+E84.0
+CIE-10 diagnostico 2:
+N18.5
+CIE-10 diagnostico 3:
+
+Tratamiento:
+Enalapril S mg c/12h. Carbonato de calcio S00 mg c/8h. Dieta hipoproteica.
+
+4.- DATOS DE LA REFERENCIA
+
+Fecha en que sera atendido: 12/12/2026
+Nombre de quien lo atendera: Dr. Rojas
+Motivo de Referencia:
+Continuidad de tratamiento
+
+Especialidad de Destino:
+Gineco-Obst
+
+Condicion al inicio del traslado:
+Mal Estado
+
+Responsable de la referencia:
+Dr. Apaza
+Colegiatura del responsable:
+S2394
+
+Persona que recibe:
+
+Fecha de recepcion:
+
+Condiciones del Paciente a la llegada al Establecimiento Destino

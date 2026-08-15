@@ -1,0 +1,84 @@
+PERU · Ministerio de Salud
+HOJA DE REFERENCIA
+Disa
+Lotes
+Numero
+
+1.- DATOS GENERALES
+
+Fecha: 14/08/2026
+Hora: 09:45
+Tipo de seguro: SIS
+Asegurado: 73942905
+Fecha de Nacimiento: 26/07/2008
+Cellular: 924545357
+
+2.- IDENTIFICACION DEL USUARIO
+
+Hospital Santa Rosa Piura
+INSN San Borja
+N° Historia Clínica: 15927
+
+Apellido Paterno: Vilca
+Apellido Materno: Elores
+Nombres: Juan Diego
+Edad anlos: 18
+Edad meses: 2
+
+Dirección: Tr. Les Pelmeros S08
+Distrito: El Tombo
+Departamento: Loreto
+
+3.- RESUMEN DE HISTORIA CLINICA
+
+Anamnesis:
+Paciente en control por consultorio externo desde los 3 años. Refiere sintomatología persistente y necesidad de continuar seguimiento especializado.
+
+T*: 38.2
+P.A.: 124/79
+F.R.: 23
+F.C.: 95
+Peso: 53.2
+
+Examen físico:
+Regular estado general, hidratado, ventilando espontaneamente. Abdomen blando depresible.
+
+Examen Auxiliares:
+Hemograma dentro de parametros. Se adjuntan resultados de laboratorio e imagenes.
+
+Diagnostico 1:
+Pediatría: Aerebral no especificada
+Emergenud renal eronica estadio S
+Tetrologia de Fallot
+
+CIE-10 diagnostico 1:
+CIE-10 diagnostico 2:
+CIE-10 diagnostico 3:
+021.3
+
+Tratamiento:
+Hidroxiurea 15 mg/kg/día. Acido folico S mg diario.
+
+4.- DATOS DE LA REFERENCIA
+
+Fecha en que sera atendido: 12/12/2026
+Nombre de quien lo atendera: Dr. Aguirre
+Motivo de Referencia: Continuidad de tratamiento
+
+Especialidad de Destino:
+Pediatria
+
+Condicion al inicio del traslado:
+Estable
+
+Responsable de la referencia:
+Dr. Bautista
+
+Colegiatura del responsable:
+54686
+
+Persona que recibe:
+
+Fecha de recepcion:
+
+Condiciones del Paciente a la llegada al Establecimiento Destino

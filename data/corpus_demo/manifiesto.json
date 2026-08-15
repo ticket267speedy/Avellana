@@ -1,5 +1,6 @@
 {
-  "n": 4,
+  "n": 12,
+  "parcial": false,
   "semilla_base": 20260814,
   "reparto": {
     "foto_manuscrita": 0.6,
@@ -8,7 +9,7 @@
     "fotocopia": 0.05
   },
   "aviso": "Corpus SINTETICO. Ningun dato corresponde a una persona real. La letra es renderizada con fuentes, mas regular que la humana: la exactitud medida aqui es OPTIMISTA respecto de manuscrito real.",
-  "origen_demo": "Subconjunto versionado del corpus completo, para que la pantalla de digitalizacion funcione en el despliegue. Las transcripciones son la salida REAL de qwen3-vl:4b corriendo en local, cacheada; no estan escritas a mano ni editadas.",
+  "origen_demo": "Corpus versionado para el despliegue. Las transcripciones son la salida REAL del modelo corriendo en local, cacheada; no estan escritas a mano ni editadas.",
   "muestras": [
     {
       "id": "hr_0001",
@@ -29,9 +30,57 @@
       "campos": 37
     },
     {
+      "id": "hr_0004",
+      "variante": "foto_manuscrita",
+      "semilla": 20260818,
+      "campos": 37
+    },
+    {
+      "id": "hr_0005",
+      "variante": "foto_manuscrita",
+      "semilla": 20260819,
+      "campos": 41
+    },
+    {
       "id": "hr_0006",
       "variante": "tipeado",
       "semilla": 20260820,
+      "campos": 41
+    },
+    {
+      "id": "hr_0007",
+      "variante": "fotocopia",
+      "semilla": 20260821,
+      "campos": 39
+    },
+    {
+      "id": "hr_0008",
+      "variante": "foto_manuscrita",
+      "semilla": 20260822,
+      "campos": 37
+    },
+    {
+      "id": "hr_0009",
+      "variante": "escaneo_manuscrito",
+      "semilla": 20260823,
+      "campos": 37
+    },
+    {
+      "id": "hr_0010",
+      "variante": "foto_manuscrita",
+      "semilla": 20260824,
+      "campos": 39
+    },
+    {
+      "id": "hr_0011",
+      "variante": "foto_manuscrita",
+      "semilla": 20260825,
+      "campos": 37
+    },
+    {
+      "id": "hr_0012",
+      "variante": "foto_manuscrita",
+      "semilla": 20260826,
       "campos": 41
     }
   ]

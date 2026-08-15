@@ -1,0 +1,82 @@
+1.- DATOS GENERALES
+
+Fecha: 1410812026
+Hora: 12:30
+Tipo de seguro: SIS
+Establecimiento de origen: Establecimiento de origen: Establecimiento de origen: Establecimiento de origen: Fecha de Nacimiento: 3011012010
+Cellular: 976469340
+
+2.- IDENTIFICACION DEL USUARIO
+
+INSN San Borja
+
+N° Historia Clinica: 9460
+
+Apellido Paterno: Ninahuanca
+Apellido Materno: Quispe
+Nombres: Jose Manuel
+Sexo: M
+Dirección: San Juan
+Distrito: Lima
+Departamento: Lima
+
+3.- RESUMEN DE HISTORIA CLINICA
+
+Anamnesis:
+
+Paciente con diagnóstico establecido desde la infancia, en seguimiento multidisciplinar. Se solicita continuidad de atención en servicio de adultos.
+
+T°: 364
+P.A.: 122180
+F.R.: 6
+F.C.: 88
+Peso: 342
+
+Examen físico:
+
+Regular estado general, anatómico, ventilando espontaneamente. Abdomen blando depresible.
+
+Examenes Auxiliares:
+
+Hemograma dentro de parametros. Se adjuntan resultados de laboratorio e imágenes.
+
+Diagnostico 1:
+
+Diagnostico 2:
+
+Diagnostico 3:
+
+Tratamiento:
+
+Enalapril 5 mg clizh. Carbonato de calcio 500 mg clizh. Dieta hipoproteica.
+
+4.- DATOS DE LA REFERENCIA
+
+Fecha en que sera atendido: 1410812026
+Nombre de quien lo atendera: Dr. Ramos
+
+Motivo de Referencia:
+
+Transicion a servicio de adultos
+
+Especialidad de Destino:
+
+Medicina
+
+Condicion al inicio del traslado:
+
+Estable
+
+Responsable de la referencia:
+
+Dr. Aguirre
+
+Colegiatura del responsable:
+
+38975
+
+Persona que recibe:
+
+Fecha de recepcion:
+
+Condiciones del Paciente a la llegada al Establecimiento Destino

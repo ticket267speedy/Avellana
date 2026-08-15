@@ -1,0 +1,76 @@
+PERU · Ministerio de Salud
+HOJA DE REFERENCIA
+Disa
+Lotes
+Numero
+
+1.- DATOS GENERALES
+
+Fecha: 14/08/2026
+Hora: 08:00
+Tipo de seguro: SIS
+Asegurado: 76033828
+Fecha de Nacimiento: 06/10/2007
+Cellular: 946931390
+Establecimiento de origen: Hospital Regional de Ucayali
+Establecimiento destino:
+
+2.- IDENTIFICACION DEL USUARIO INSN San Borja
+
+N° Historia Clínica: 12651
+Apellido Paterno: Bautista
+Apellido Materno: Vilca
+Nombres: Katherine
+Sexo: M
+Edad anios: 18
+Edad meses: 4
+Dirección: T. Grou, 634
+Distrito: San Juan
+Departamento: Ucayali
+
+3.- RESUMEN DE HISTORIA CLINICA
+
+Anamnesis:
+Acude por control programado. Madre refiere adherencia irregular al tratamiento en los últimos 2 meses por dificultad
+poro ocudir a citas.
+
+T°: 36.5
+P.A.: 109/64
+F.R.: 24
+F.C.: 100
+Peso: 42.3
+Examen físico:
+Regular estado general, hidratado, ventilando espontaneously. Abdomen blando depresible.
+
+Examenes Auxiliares:
+Hemografo dentro de parametros. Se adjuntan resultados de laboratorio e imagenes.
+
+Diagnostico 1:
+Infectiencia pancreatica exocrina
+Enfermedad renal cronica estadio 5
+Artritis idiopatica juvenil poliarticular
+Tratamiento:
+Hidroxiurea 15 mg/kg/día. Acido folico 5 mg diario.
+
+4.- DATOS DE LA REFERENCIA
+
+Fecha en que sera atendido: 01/10/2026
+Motivo de Referencia:
+Transicion a servicio de adultos
+Nombre de quien lo atendera:
+Dr. Apaza
+
+Especialidad de Destino:
+Gineco-Obst
+Condicion al inicio del traslado:
+Estable
+
+Responsable de la referencia:
+Dra. Zapata
+Colegiatura del responsable:
+S3457
+
+Persona que recibe:
+Fecha de recepcion:
+
+Condiciones del Paciente a la llegada al Establecimiento Destino

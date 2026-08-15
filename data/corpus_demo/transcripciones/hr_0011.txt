@@ -1,0 +1,74 @@
+1.- DATOS GENERALES
+
+Fecha: 14/08/2026
+Hora: 12:30
+Tipo de seguro: SIS
+DN: 71866995
+Fecha de Nacimiento: 27/02/2011
+Cellular: 956546154
+
+2.- IDENTIFICACION DEL USUARIO
+
+N° Historia Clínica: 30494
+
+Apellido Paterno: Ticona
+Apellido Materno: Apaza
+Nombres: Luis Alberto
+Sexo: M
+Dirección: Calle Los Cedros 553
+Distrito: Calleria
+Edad anios: 15
+Edad meses: 10
+Departamento: Cusco
+
+3.- RESUMEN DE HISTORIA CLINICA
+
+Anamnesis:
+Paciente con diagnóstico establecido desde la infancia, en seguimiento multidisciplinario. Se solicita continuidad de atención en servicio de adultos.
+
+T*: 37.8
+P.A.: 98/70
+F.R.: 22
+F.C.: 85
+Peso: 595
+
+Examen Rasico:
+Regional estado general, nidratado, ventilando espontaneamente. Abdomen blando depresible
+
+Examenes Auxiliares:
+Hemograma dentro de parametros. Se adjuntan resultados de laboratorio e imágenes.
+
+Diagnostico 1:
+Fibrosis quistica con manifestaciones pulmonares
+
+Diagnostico 2:
+CIE-10 diagnostico 2:
+
+Diagnostico 3:
+CIE-10 diagnostico 3:
+
+Tratamiento:
+Dornasa alfa 2.5 mg nebulizada c/24h. Enzimas pancreaticas con cada comida
+
+4.- DATOS DE LA REFERENCIA
+
+Fecha en que sera atendido: 10/11/2026
+Nombre de quien lo atendera: Dr. Quispe
+
+Motivo de Referencia:
+Evaluación por especialidad
+
+Especialidad de Destino:
+Laboratorio
+
+Condicion al inicio del traslado:
+Estable
+
+Responsable de la referencia:
+Dr. Apaza
+
+Persona que recibe:
+
+Fecha de recepcion:
+
+Condiciones del Paciente a la llegada al Establecimiento Destino

@@ -28,7 +28,7 @@ from relevo.aplicacion.digitalizar_documento import (
     DigitalizarDocumento,
 )
 from relevo.aplicacion.priorizar_cohorte import PriorizarCohorte
-from relevo.aplicacion.revisar_corpus import RevisarCorpus
+from relevo.aplicacion.revisar_corpus import RevisarCorpus, RevisarSubida
 from relevo.dominio.servicios.calculadora_iut import CalculadoraIUT
 from relevo.dominio.servicios.clasificador_cohorte import ClasificadorCohorte
 from relevo.dominio.entidades.paciente import Paciente
@@ -57,7 +57,10 @@ from relevo.infraestructura.llm.extraccion_por_reglas import (
 from relevo.infraestructura.documentos.pdf_reportlab import (
     generar_pasaporte_pdf_bytes,
 )
-from relevo.infraestructura.llm.lector_ollama import elegir_lectores
+from relevo.infraestructura.llm.lector_reconectable import (
+    EstadoLector,
+    LectorReconectable,
+)
 from relevo.infraestructura.persistencia.repositorio_memoria import (
     RepositorioPacientesMemoria,
 )
@@ -134,6 +137,7 @@ class Contenedor:
     digitalizar: DigitalizarDocumento
     confirmar: ConfirmarDigitalizacion
     revisar_corpus: RevisarCorpus
+    revisar_subida: RevisarSubida
     corpus: CorpusEnArchivos
     """El adaptador concreto, para que la pantalla pinte la imagen sin releerla.
 
@@ -141,22 +145,18 @@ class Contenedor:
     pasa por `revisar_corpus`; esto es solo la ruta del JPEG.
     """
     politica_plazos: PoliticaPlazos
-    lector_disponible: bool
-    """False cuando no hay ningun modelo instalado.
+    lector: LectorReconectable
+    """El lector, que redescubre a Ollama por su cuenta.
 
-    La interfaz lo usa para decirlo en pantalla en vez de fallar a mitad de una
-    demo: sin lector, el flujo entra en captura manual y todo lo demas sigue
-    funcionando igual.
+    No se guarda un booleano `lector_disponible` porque seria mentira en cuanto
+    pasaran unos segundos: `construir()` corre una sola vez al arrancar el
+    servidor, y el portatil que sirve el modelo puede encenderse o suspenderse
+    en cualquier momento despues. Se pregunta cada vez con `estado_lector()`.
     """
-    host_lector: str
-    """Contra que Ollama se resolvio el lector.
 
-    La pantalla lo muestra porque en el despliegue deja de ser obvio: puede ser
-    esta maquina o la de otra persona al otro lado de un tunel, y quien mira la
-    demo tiene derecho a saber donde se esta ejecutando el modelo.
-    """
-    nombre_lector: str
-    """El modelo elegido, o `sin-modelo` si no habia ninguno."""
+    def estado_lector(self, forzar: bool = False) -> EstadoLector:
+        """Si hay modelo AHORA, y donde esta."""
+        return self.lector.estado(forzar=forzar)
 
     def emitir_pasaporte(self, paciente: Paciente, hoy: date) -> bytes:
         """El Pasaporte de Salud 18+ en PDF, listo para imprimir y firmar."""
@@ -198,24 +198,16 @@ def construir(
     la variable de entorno `RELEVO_OLLAMA_HOST`, y en su defecto se usa el
     Ollama local. Ver `VARIABLE_HOST_OLLAMA`.
     """
-    host = _host_ollama(host_ollama)
-    principal, _contraste = elegir_lectores(host=host)
-    nombre = str(getattr(principal, "nombre", "sin-modelo"))
-    hay_lector = nombre != "sin-modelo"
-
-    digitalizar = DigitalizarDocumento(
-        lector=principal,  # type: ignore[arg-type]
-        extraer=_adaptar_campos,
-    )
+    lector = LectorReconectable(host=_host_ollama(host_ollama))
+    digitalizar = DigitalizarDocumento(lector=lector, extraer=_adaptar_campos)
     corpus = CorpusEnArchivos.descubrir(RAIZ_DATOS)
 
     return Contenedor(
         digitalizar=digitalizar,
         confirmar=ConfirmarDigitalizacion(generar_pdf=_generar_acta),
         revisar_corpus=RevisarCorpus(corpus=corpus, digitalizar=digitalizar),
+        revisar_subida=RevisarSubida(digitalizar=digitalizar),
         corpus=corpus,
         politica_plazos=cargar_politica_plazos(),
-        lector_disponible=hay_lector,
-        host_lector=host,
-        nombre_lector=nombre,
+        lector=lector,
     )

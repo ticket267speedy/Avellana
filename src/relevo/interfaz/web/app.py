@@ -13,6 +13,7 @@ import base64
 import io
 import json
 import sys
+from collections.abc import Callable
 from datetime import date, datetime, timedelta
 from pathlib import Path
 from urllib.parse import quote
@@ -31,6 +32,7 @@ from relevo.aplicacion.priorizar_cohorte import (
     PriorizarCohorte,
     ResultadoPriorizacion,
 )
+from relevo.aplicacion.digitalizar_documento import DocumentoDigitalizado
 from relevo.aplicacion.validacion_captura import (
     ETIQUETA_OTRO,
     Estado,
@@ -93,36 +95,49 @@ _CORPUS_DISPONIBLE = _CORPUS.hay_documentos
 _CORPUS_ES_DEMO = _CORPUS.es_muestra_parcial
 
 
-def _donde_corre_el_modelo() -> tuple[str, str]:
-    """(nivel, mensaje) sobre dónde se está ejecutando el lector.
+@st.fragment(run_every="10s")
+def _semaforo_llm() -> None:
+    """Estado del modelo, sondeado solo, cada 10 segundos.
 
-    En local esto era obvio y no hacía falta decirlo. En el despliegue deja de
-    serlo: el modelo puede estar en el contenedor (nunca), en la máquina de
-    quien mira, o en la de otra persona al otro lado de un túnel. Quien juzga
-    una demo de lectura automática tiene derecho a saber dónde se ejecuta.
+    POR QUE UN FRAGMENTO Y NO UNA LINEA MAS DE LA PAGINA
+    `run_every` sobre un fragmento repinta SOLO este recuadro. Si el sondeo
+    viviera en el cuerpo de la pagina, refrescarlo obligaria a re-ejecutar la
+    pantalla entera cada 10 segundos: perderia lo que la persona esta
+    escribiendo en las casillas de verificacion. Aqui el resto de la pantalla
+    ni se entera.
+
+    El sondeo real vive en `LectorReconectable`, que cachea unos segundos: esto
+    solo pinta lo que aquel ya sabe.
     """
-    if not SISTEMA.lector_disponible:
-        return (
-            "warning",
-            "**Sin modelo alcanzable.** Se muestran transcripciones ya "
-            "producidas por el modelo y guardadas en disco. La lectura en vivo "
-            "necesita un Ollama accesible; ver `docs/DESPLIEGUE.md`.",
+    estado = SISTEMA.estado_lector()
+
+    if not estado.activo:
+        st.markdown(
+            '<div class="llm-estado llm-caida">LLM NO ACTIVA — el servidor del '
+            "modelo está caído</div>",
+            unsafe_allow_html=True,
         )
-    remoto = "localhost" not in SISTEMA.host_lector and "127.0.0.1" not in (
-        SISTEMA.host_lector
-    )
-    if remoto:
-        return (
-            "success",
-            f"**Modelo en vivo:** `{SISTEMA.nombre_lector}` — ejecutándose en "
-            f"una máquina del equipo, alcanzada en `{SISTEMA.host_lector}`. "
-            "El documento viaja a ese equipo y vuelve transcrito.",
+        st.caption(
+            f"Sin respuesta en `{estado.host}`. Se siguen mostrando las "
+            "transcripciones que el modelo ya produjo y quedaron guardadas, "
+            "así que la pantalla funciona igual; lo único que no se puede "
+            "hacer ahora es leer un documento nuevo. En cuanto el servidor "
+            "vuelva, esto se pone en verde solo."
         )
-    return (
-        "success",
-        f"**Modelo en vivo:** `{SISTEMA.nombre_lector}` en esta máquina. "
-        "Ningún documento sale de aquí.",
+        return
+
+    st.markdown(
+        f'<div class="llm-estado llm-activa">LLM ACTIVA — {estado.modelo}</div>',
+        unsafe_allow_html=True,
     )
+    if estado.es_remoto:
+        st.caption(
+            f"El modelo corre en una máquina del equipo, alcanzada en "
+            f"`{estado.host}`. El documento viaja a ese equipo y vuelve "
+            "transcrito; no pasa por ningún servicio de terceros."
+        )
+    else:
+        st.caption("El modelo corre en esta máquina. Ningún documento sale de aquí.")
 
 
 st.set_page_config(
@@ -148,6 +163,56 @@ st.markdown(
     .block-container {
         padding-top: 1rem;
         padding-bottom: 2.5rem;
+    }
+
+    /* ── SIN PARPADEO AL ESCRIBIR ──────────────────────────────────────
+       Streamlit vuelve a ejecutar el script entero cada vez que alguien
+       toca una casilla, y mientras tanto atenua lo que considera "viejo".
+       En una pantalla de captura eso significa que la vista completa se
+       apaga y se enciende despues de rellenar CADA campo.
+
+       El efecto esta pensado para paginas donde un cambio recalcula todo
+       y conviene avisar. Aqui es al reves: validar un DNI no invalida el
+       resto de la pantalla, asi que el aviso es ruido, y ademas cuesta
+       trabajo — quien esta transcribiendo 37 campos mirando un escaneo
+       pierde el punto de fijacion en cada pestaneo.
+
+       Se apaga la atenuacion, no la re-ejecucion: el estado sigue siendo
+       correcto, simplemente deja de anunciarse. */
+    [data-stale="true"],
+    .stApp [data-stale="true"] {
+        opacity: 1 !important;
+        transition: none !important;
+    }
+    [data-testid="stStatusWidget"] {
+        display: none !important;
+    }
+
+    /* El estado de cada casilla se pinta en su propio borde, y esas reglas
+       se emiten campo a campo desde `_borde()`: dependen del veredicto, que
+       no se conoce hasta despues de validar. Aqui solo va lo comun. */
+    .stTextInput input, .stDateInput input {
+        transition: border-color 0.12s ease;
+    }
+
+    /* ── SEMAFORO DE LA LLM ─────────────────────────────────────────── */
+    .llm-estado {
+        display: inline-block;
+        padding: 7px 14px;
+        border-radius: 5px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        margin-bottom: 10px;
+    }
+    .llm-activa {
+        background-color: #f0fff4;
+        color: #22543d;
+        border-left: 5px solid #38a169;
+    }
+    .llm-caida {
+        background-color: #fff5f5;
+        color: #9b2c2c;
+        border-left: 5px solid #e53e3e;
     }
 
     /* Encabezado Hospitalario Formal */
@@ -986,6 +1051,323 @@ with tab_ciclo:
             st.success(f"Transferencia del paciente {paciente_sel.id} confirmada exitosamente como CITA CUMPLIDA.")
 
 
+def _verificacion(
+    lectura: DocumentoDigitalizado,
+    verdad: dict[str, str],
+    doc_id: str,
+) -> None:
+    """Revision campo por campo de un documento ya transcrito.
+
+    Sirve a las dos procedencias: un documento del corpus de evaluacion y
+    uno que sube la persona. La unica diferencia es `verdad`, que llega
+    vacia en el segundo caso; entonces no se pinta el marcador de acierto,
+    porque no hay contra que medir.
+
+    Vive en el nivel del modulo y no dentro de la pestania para poder
+    llamarse desde ambas ramas sin duplicar trescientas lineas.
+    """
+    st.markdown("##### Verificación campo por campo")
+    st.caption(
+        "Corrige lo que haga falta mirando el escaneo de la izquierda. "
+        "Ningún campo se da por bueno hasta que una persona lo confirma."
+    )
+
+    aciertos = revisiones = errores = 0
+    editados: dict[str, tuple[str, str | None]] = {}
+    veredictos: dict[str, Veredicto] = {}
+    por_nombre = {c.nombre: c for c in lectura.campos}
+
+    def _pinta(nombre: str, v: Veredicto) -> None:
+        """Feedback bajo el campo. El color dice qué hacer, no juzga."""
+        if v.estado is Estado.VACIO:
+            return
+        tono = {
+            Estado.VALIDO: "#22543d",
+            Estado.INCOMPLETO: "#9c4221",
+            Estado.ERRONEO: "#9b2c2c",
+        }[v.estado]
+        st.markdown(
+            f"<div style='font-size:0.72rem;color:{tono};margin-top:-10px;"
+            f"margin-bottom:6px;'>{v.estado.icono} {v.mensaje}</div>",
+            unsafe_allow_html=True,
+        )
+
+    # ── EL BORDE DE LA CASILLA ─────────────────────────────
+    # El mensaje de texto sigue estando, pero hay que leerlo.
+    # Quien transcribe 37 campos mirando un escaneo necesita
+    # ver el error sin leer nada, que es como funciona
+    # cualquier formulario web: el borde se pone rojo.
+    #
+    # Se emite campo a campo porque el color depende del
+    # veredicto, y ese no se conoce hasta haber validado.
+    # `st.container(key=X)` deja la clase `st-key-X` en el DOM,
+    # que es a lo que se engancha esta regla.
+    _BORDES = {
+        Estado.ERRONEO: ("#e53e3e", "#fff5f5"),
+        Estado.INCOMPLETO: ("#dd6b20", "#fffaf0"),
+        Estado.VALIDO: ("#38a169", "transparent"),
+    }
+
+    def _borde(clave: str, v: Veredicto) -> None:
+        par = _BORDES.get(v.estado)
+        if par is None:  # VACIO: aun no se ha escrito nada
+            return
+        color, fondo = par
+        st.markdown(
+            f"<style>.st-key-{clave} input {{"
+            f"border:2px solid {color} !important;"
+            f"background-color:{fondo} !important;}}</style>",
+            unsafe_allow_html=True,
+        )
+
+    def _campo(
+        nombre: str, etiqueta: str, validar: Callable[[str], Veredicto],
+        marcador: str = "",
+    ) -> str:
+        """Casilla de texto con su validación y su borde."""
+        clave = f"c_{nombre}_{doc_id}"
+        with st.container(key=clave):
+            valor = st.text_input(
+                etiqueta,
+                value=por_nombre[nombre].valor or "",
+                key=f"d_{nombre}_{doc_id}",
+                placeholder=marcador,
+                help=f"el modelo leyó: {_leido(nombre)}",
+            )
+            ver = validar(valor)
+            _borde(clave, ver)
+            _pinta(nombre, ver)
+        editados[nombre] = (valor, por_nombre[nombre].valor)
+        veredictos[nombre] = ver
+        return valor
+
+    def _leido(nombre: str) -> str:
+        c = por_nombre.get(nombre)
+        return (c.crudo or "—") if c else "—"
+
+    for campo in lectura.campos:
+        esperado = verdad.get(campo.nombre)
+        if esperado is None:
+            continue
+        if campo.valor is None:
+            revisiones += 1
+        elif str(campo.valor).strip() == str(esperado).strip():
+            aciertos += 1
+        else:
+            errores += 1
+
+    col_izq, col_der = st.columns(2, gap="medium")
+
+    # ── Campos con regla propia ─────────────────────────────────
+    with col_izq:
+        _campo("dni", "DNI del paciente", validar_dni, "8 dígitos")
+        _campo(
+            "celular", "Celular de contacto", validar_celular,
+            "9 dígitos, empieza en 9",
+        )
+        _campo(
+            "numero_hc", "N.º de historia clínica", validar_numero_hc,
+            "solo dígitos",
+        )
+
+    with col_der:
+        # Calendario en vez de texto: una fecha tecleada admite
+        # 31/02 y admite el formato americano. El calendario no.
+        leida = por_nombre["fecha_nacimiento"].valor
+        try:
+            inicial = (
+                datetime.strptime(leida, "%d/%m/%Y").date() if leida else None
+            )
+        except ValueError:
+            inicial = None
+        _clave_fn = f"c_fecha_nacimiento_{doc_id}"
+        with st.container(key=_clave_fn):
+            v_fnac = st.date_input(
+                "Fecha de nacimiento",
+                value=inicial,
+                min_value=date(fecha_evaluacion.year - 100, 1, 1),
+                max_value=fecha_evaluacion,
+                format="DD/MM/YYYY",
+                key=f"d_fn_{doc_id}",
+                help=f"el modelo leyó: {_leido('fecha_nacimiento')}",
+            )
+            ver = validar_fecha_nacimiento(v_fnac, fecha_evaluacion)
+            _borde(_clave_fn, ver)
+            _pinta("fecha_nacimiento", ver)
+        editados["fecha_nacimiento"] = (
+            v_fnac.strftime("%d/%m/%Y") if v_fnac else "", leida
+        )
+        veredictos["fecha_nacimiento"] = ver
+
+        for nom, etiq in (
+            ("establecimiento_origen", "Establecimiento de origen"),
+            ("establecimiento_destino", "Establecimiento de destino"),
+        ):
+            # Busqueda sobre el registro nacional (RENIPRESS), no
+            # sobre una lista escrita a mano: un paciente puede venir
+            # referido desde una posta de Ucayali, y obligar a marcar
+            # "Otro" en ese caso llena la base de texto libre.
+            leido_cat = por_nombre[nom].valor or ""
+            consulta = st.text_input(
+                f"{etiq} — busca en el registro nacional",
+                value=leido_cat,
+                key=f"d_{nom}_q_{doc_id}",
+                placeholder="parte del nombre o la sigla (ej. INSN)",
+                help=f"el modelo leyó: {_leido(nom)}",
+            )
+            candidatos = (
+                SISTEMA.buscar_establecimiento(consulta, limite=6)
+                if consulta
+                else ()
+            )
+            if candidatos:
+                etiquetas = [e.etiqueta for e in candidatos] + [ETIQUETA_OTRO]
+                sel = st.radio(
+                    f"coincidencias_{nom}",
+                    options=etiquetas,
+                    key=f"d_{nom}_sel_{doc_id}",
+                    label_visibility="collapsed",
+                )
+                if sel == ETIQUETA_OTRO:
+                    elegido = consulta
+                    st.markdown(
+                        "<div style='font-size:0.72rem;color:#9c4221;"
+                        "margin-top:-6px;'>⚠ no figura en RENIPRESS · "
+                        "pendiente de conciliar</div>",
+                        unsafe_allow_html=True,
+                    )
+                else:
+                    elegido = next(
+                        e.nombre for e in candidatos if e.etiqueta == sel
+                    )
+                    cod = next(
+                        e.codigo for e in candidatos if e.etiqueta == sel
+                    )
+                    st.markdown(
+                        f"<div style='font-size:0.72rem;color:#22543d;"
+                        f"margin-top:-6px;'>✅ RENIPRESS {cod}</div>",
+                        unsafe_allow_html=True,
+                    )
+            else:
+                elegido = consulta
+                if consulta:
+                    st.markdown(
+                        "<div style='font-size:0.72rem;color:#9c4221;"
+                        "margin-top:-10px;'>⚠ sin coincidencias en RENIPRESS · "
+                        "pendiente de conciliar</div>",
+                        unsafe_allow_html=True,
+                    )
+            editados[nom] = (elegido, leido_cat)
+            veredictos[nom] = Veredicto(Estado.VALIDO)
+
+    # ── Campos de texto libre ───────────────────────────────────
+    col_ap1, col_ap2 = st.columns(2)
+    for col, nom, etiq in (
+        (col_ap1, "apellido_paterno", "Apellido paterno"),
+        (col_ap2, "apellido_materno", "Apellido materno"),
+    ):
+        with col:
+            val = st.text_input(
+                etiq, value=por_nombre[nom].valor or "",
+                key=f"d_{nom}_{doc_id}",
+                help=f"el modelo leyó: {_leido(nom)}",
+            )
+            editados[nom] = (val, por_nombre[nom].valor)
+            veredictos[nom] = Veredicto(Estado.VALIDO)
+
+    st.divider()
+    bloqueantes = [n for n, v in veredictos.items() if v.bloquea_emision]
+    incompletos = [
+        n for n, v in veredictos.items() if v.estado is Estado.INCOMPLETO
+    ]
+    if bloqueantes:
+        st.error(
+            "No se puede emitir el acta: corrige "
+            + ", ".join(f"**{b}**" for b in bloqueantes)
+        )
+    elif incompletos:
+        st.warning(
+            "Campos a medio escribir: " + ", ".join(incompletos)
+        )
+
+    revisor = st.text_input(
+        "Nombre de quien revisa (queda registrado en el acta):",
+        key=f"rev_{doc_id}",
+    )
+    st.caption(
+        "El sistema registra el nombre, la fecha y la hora, pero **no verifica "
+        "la identidad**: eso exige credenciales de acceso o firma digital "
+        "certificada (RENIEC). Pendiente para el piloto."
+    )
+    confirmar = st.button(
+        "Confirmar digitalización y generar acta",
+        type="primary",
+        disabled=bool(bloqueantes) or not revisor.strip(),
+        key=f"btn_acta_{doc_id}",
+    )
+
+    if confirmar:
+        # Toda la logica de clasificar y armar el acta vive en el
+        # caso de uso. Aqui solo se recogen los valores y se pinta.
+        acta, pdf = SISTEMA.confirmar.ejecutar(
+            documento_id=doc_id,
+            valores_finales={n: v for n, (v, _) in editados.items()},
+            valores_leidos={n: leido for n, (_, leido) in editados.items()},
+            revisor=revisor,
+        )
+        st.success(
+            f"Digitalización confirmada por **{acta.revisor}** el "
+            f"{acta.momento.strftime('%d/%m/%Y a las %H:%M')} · "
+            f"{acta.automaticos} campos aceptados de la lectura "
+            f"automática y {acta.corregidos} corregidos a mano."
+        )
+        pendientes = [
+            c.nombre
+            for c in acta.campos
+            if c.nombre.startswith("establecimiento")
+            and c.valor_final
+            and not SISTEMA.establecimiento_en_catalogo(c.valor_final)
+        ]
+        if pendientes:
+            st.warning(
+                "Queda pendiente de conciliar contra RENIPRESS: "
+                + ", ".join(pendientes)
+            )
+        st.session_state[f"acta_{doc_id}"] = pdf
+
+    if st.session_state.get(f"acta_{doc_id}"):
+        st.download_button(
+            "Descargar acta de digitalización (PDF)",
+            data=st.session_state[f"acta_{doc_id}"],
+            file_name=f"acta_digitalizacion_{doc_id}.pdf",
+            mime="application/pdf",
+            width="stretch",
+        )
+
+    total = aciertos + revisiones + errores
+    if total:
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Capturados", f"{aciertos}/{total}")
+        c2.metric("A revisión humana", f"{revisiones}/{total}")
+        c3.metric("Error no detectado", f"{errores}/{total}")
+
+    st.markdown(
+        "<div style='background:#edf2f7;border-left:4px solid #4a5568;"
+        "padding:10px 14px;margin-top:12px;font-size:0.8rem;color:#2d3748;'>"
+        "<strong>Cómo leer esta tabla.</strong> Un campo en "
+        "<strong>REVISAR</strong> no es un fallo del sistema: es el sistema "
+        "diciendo que no se cree lo que leyó, y pidiendo que una persona lo "
+        "confirme. El único resultado malo es <strong>ERROR</strong> — un dato "
+        "equivocado que pasó como bueno. Hoy, sin este sistema, todos los "
+        "campos entran a REFCON tecleados a mano y sin ninguna verificación."
+        "</div>",
+        unsafe_allow_html=True,
+    )
+
+    with st.expander("Ver transcripción completa del documento"):
+        st.text(lectura.texto[:4000])
+
+
 # ───────────────────────────────────────────────────────────────────────────
 # TAB 5: DIGITALIZACIÓN DE HOJA DE REFERENCIA
 #
@@ -1001,17 +1383,86 @@ with tab_digital:
         "máquina del equipo."
     )
 
-    _nivel, _mensaje = _donde_corre_el_modelo()
-    (st.success if _nivel == "success" else st.warning)(_mensaje)
+    _semaforo_llm()
+    _estado_llm = SISTEMA.estado_lector()
 
     if _CORPUS_ES_DEMO:
         st.info(
-            "Estás viendo la **muestra versionada** del corpus (4 documentos de 12). "
-            "El corpus completo se genera en local y no se sube al repositorio; "
-            "esta muestra existe para que la pantalla funcione en el despliegue."
+            "Estás viendo una **muestra parcial** del corpus. El corpus completo "
+            "se genera en local; esta muestra es la que va versionada para que "
+            "la pantalla funcione en el despliegue."
         )
 
-    if not _CORPUS_DISPONIBLE:
+    # ── SUBIR UN DOCUMENTO PROPIO ──────────────────────────────────────────
+    # El corpus sirve para MEDIR: son documentos con verdad de referencia
+    # conocida, y por eso la pantalla puede decir cuantos campos acerto el
+    # modelo. Pero quien trabaja en el INSN no quiere medir: quiere meter la
+    # hoja que tiene delante. Sin esto, la pantalla solo sabia leer documentos
+    # que el propio sistema se habia inventado.
+    subida = st.file_uploader(
+        "Sube una Hoja de Referencia escaneada o fotografiada (JPG o PNG)",
+        type=["jpg", "jpeg", "png"],
+        help=(
+            "El documento se lee con el modelo y NO se guarda en ningún sitio: "
+            "vive en tu sesión y desaparece al cerrar la pestaña."
+        ),
+    )
+
+    # Una lectura en vivo sustituye a la caché solo durante esta sesión del
+    # navegador: el archivo en disco se deja intacto.
+    _en_vivo: dict[str, str] = st.session_state.setdefault("lecturas_vivo", {})
+
+    if subida is not None:
+        # El tamaño entra en la clave para que volver a subir el mismo nombre
+        # con otro contenido no reutilice la lectura anterior.
+        clave_subida = f"subida::{subida.name}::{subida.size}"
+        col_sel, col_est = st.columns([2, 3], gap="large")
+
+        with col_sel:
+            st.image(subida, caption=subida.name, width="stretch")
+
+        with col_est:
+            if clave_subida in _en_vivo:
+                resultado = SISTEMA.revisar_subida.releer_texto(
+                    clave_subida, _en_vivo[clave_subida]
+                )
+            elif not _estado_llm.activo:
+                st.error(
+                    "**La LLM no está activa**, así que este documento no se "
+                    "puede leer. Un documento subido no tiene transcripción "
+                    "guardada: necesita el modelo sí o sí."
+                )
+                resultado = None
+            else:
+                st.info(
+                    f"Documento listo para leer con `{_estado_llm.modelo}`. "
+                    "Tarda alrededor de dos minutos en CPU."
+                )
+                resultado = None
+                if st.button("Leer este documento", type="primary"):
+                    with st.spinner(
+                        f"Transcribiendo con {_estado_llm.modelo} — "
+                        "esto tarda un par de minutos…"
+                    ):
+                        _en_vivo[clave_subida] = SISTEMA.revisar_subida.leer(
+                            clave_subida, subida.getvalue()
+                        ).documento.texto
+                    st.rerun()
+
+            if resultado is not None:
+                doc_id = clave_subida
+                st.success(
+                    f"Transcripción producida por `{_estado_llm.modelo}` sobre "
+                    "tu documento."
+                )
+                st.caption(
+                    "Este documento no tiene valores correctos conocidos, así "
+                    "que no se puede medir el acierto del modelo — solo "
+                    "revisarlo campo por campo."
+                )
+                _verificacion(resultado.documento, resultado.verdad, doc_id)
+
+    elif not _CORPUS_DISPONIBLE:
         st.warning(
             "No hay corpus de documentos generado todavía. "
             "Genera uno con:  `python -m relevo.interfaz.cli.generar_corpus --n 12`"
@@ -1021,7 +1472,7 @@ with tab_digital:
 
         with col_sel:
             doc_id = st.selectbox(
-                "Documento escaneado:",
+                "…o elige uno del corpus de evaluación:",
                 options=[m.id for m in _CORPUS.muestras()],
                 format_func=lambda d: f"{d}  ·  {_CORPUS.variante_de(d)}",
             )
@@ -1030,9 +1481,6 @@ with tab_digital:
                 st.image(str(ruta_img), caption=f"{doc_id}.jpg", width="stretch")
 
         with col_est:
-            # Una relectura en vivo sustituye a la caché solo durante esta
-            # sesión del navegador: el archivo en disco se deja intacto.
-            _en_vivo: dict[str, str] = st.session_state.setdefault("lecturas_vivo", {})
             if doc_id in _en_vivo:
                 resultado = _CORPUS.releer_texto(doc_id, _en_vivo[doc_id])
             else:
@@ -1043,24 +1491,22 @@ with tab_digital:
                     "Este documento aún no se ha leído. La transcripción con el modelo "
                     "tarda alrededor de dos minutos en CPU."
                 )
-                if SISTEMA.lector_disponible:
+                if _estado_llm.activo:
                     if st.button("Leer con el modelo ahora", type="primary"):
-                        with st.spinner(
-                            f"Transcribiendo con {SISTEMA.nombre_lector}…"
-                        ):
+                        with st.spinner(f"Transcribiendo con {_estado_llm.modelo}…"):
                             _CORPUS.leer_en_vivo(doc_id)
                         st.rerun()
                 else:
                     st.caption(
-                        "No hay ningún modelo alcanzable, así que este documento "
-                        "no se puede leer ahora. Elige otro: los demás ya tienen "
+                        "La LLM no está activa, así que este documento no se "
+                        "puede leer ahora. Elige otro: los demás ya tienen "
                         "su transcripción guardada."
                     )
             else:
                 if resultado.fue_en_vivo:
                     st.success(
                         f"Transcripción recién producida por "
-                        f"`{SISTEMA.nombre_lector}` en esta sesión."
+                        f"`{_estado_llm.modelo}` en esta sesión."
                     )
                 else:
                     st.caption(f"Transcripción obtenida de: {resultado.origen}")
@@ -1071,7 +1517,7 @@ with tab_digital:
                 # puesto y no tiene forma de comprobar que hay algo leyendo.
                 # Este boton es la prueba en directo, y es la razon de que la
                 # cache no baste por si sola.
-                if SISTEMA.lector_disponible:
+                if _estado_llm.activo:
                     if st.button(
                         "Volver a leer en vivo con el modelo",
                         key=f"revivo_{doc_id}",
@@ -1082,7 +1528,7 @@ with tab_digital:
                         ),
                     ):
                         with st.spinner(
-                            f"Transcribiendo con {SISTEMA.nombre_lector} — "
+                            f"Transcribiendo con {_estado_llm.modelo} — "
                             "esto tarda un par de minutos…"
                         ):
                             _en_vivo[doc_id] = _CORPUS.leer_en_vivo(
@@ -1093,271 +1539,7 @@ with tab_digital:
                 lectura = resultado.documento
                 verdad = resultado.verdad
 
-                st.markdown("##### Verificación campo por campo")
-                st.caption(
-                    "Corrige lo que haga falta mirando el escaneo de la izquierda. "
-                    "Ningún campo se da por bueno hasta que una persona lo confirma."
-                )
-
-                aciertos = revisiones = errores = 0
-                editados: dict[str, tuple[str, str | None]] = {}
-                veredictos: dict[str, Veredicto] = {}
-                por_nombre = {c.nombre: c for c in lectura.campos}
-
-                def _pinta(nombre: str, v: Veredicto) -> None:
-                    """Feedback bajo el campo. El color dice qué hacer, no juzga."""
-                    if v.estado is Estado.VACIO:
-                        return
-                    tono = {
-                        Estado.VALIDO: "#22543d",
-                        Estado.INCOMPLETO: "#9c4221",
-                        Estado.ERRONEO: "#9b2c2c",
-                    }[v.estado]
-                    st.markdown(
-                        f"<div style='font-size:0.72rem;color:{tono};margin-top:-10px;"
-                        f"margin-bottom:6px;'>{v.estado.icono} {v.mensaje}</div>",
-                        unsafe_allow_html=True,
-                    )
-
-                def _leido(nombre: str) -> str:
-                    c = por_nombre.get(nombre)
-                    return (c.crudo or "—") if c else "—"
-
-                for campo in lectura.campos:
-                    esperado = verdad.get(campo.nombre)
-                    if esperado is None:
-                        continue
-                    if campo.valor is None:
-                        revisiones += 1
-                    elif str(campo.valor).strip() == str(esperado).strip():
-                        aciertos += 1
-                    else:
-                        errores += 1
-
-                col_izq, col_der = st.columns(2, gap="medium")
-
-                # ── Campos con regla propia ─────────────────────────────────
-                with col_izq:
-                    v_dni = st.text_input(
-                        "DNI del paciente", value=por_nombre["dni"].valor or "",
-                        key=f"d_dni_{doc_id}", placeholder="8 dígitos",
-                        help=f"el modelo leyó: {_leido('dni')}",
-                    )
-                    ver = validar_dni(v_dni)
-                    _pinta("dni", ver)
-                    editados["dni"], veredictos["dni"] = (v_dni, por_nombre["dni"].valor), ver
-
-                    v_cel = st.text_input(
-                        "Celular de contacto", value=por_nombre["celular"].valor or "",
-                        key=f"d_cel_{doc_id}", placeholder="9 dígitos, empieza en 9",
-                        help=f"el modelo leyó: {_leido('celular')}",
-                    )
-                    ver = validar_celular(v_cel)
-                    _pinta("celular", ver)
-                    editados["celular"], veredictos["celular"] = (v_cel, por_nombre["celular"].valor), ver
-
-                    v_hc = st.text_input(
-                        "N.º de historia clínica", value=por_nombre["numero_hc"].valor or "",
-                        key=f"d_hc_{doc_id}", placeholder="solo dígitos",
-                        help=f"el modelo leyó: {_leido('numero_hc')}",
-                    )
-                    ver = validar_numero_hc(v_hc)
-                    _pinta("numero_hc", ver)
-                    editados["numero_hc"], veredictos["numero_hc"] = (v_hc, por_nombre["numero_hc"].valor), ver
-
-                with col_der:
-                    # Calendario en vez de texto: una fecha tecleada admite
-                    # 31/02 y admite el formato americano. El calendario no.
-                    leida = por_nombre["fecha_nacimiento"].valor
-                    try:
-                        inicial = (
-                            datetime.strptime(leida, "%d/%m/%Y").date() if leida else None
-                        )
-                    except ValueError:
-                        inicial = None
-                    v_fnac = st.date_input(
-                        "Fecha de nacimiento",
-                        value=inicial,
-                        min_value=date(fecha_evaluacion.year - 100, 1, 1),
-                        max_value=fecha_evaluacion,
-                        format="DD/MM/YYYY",
-                        key=f"d_fn_{doc_id}",
-                        help=f"el modelo leyó: {_leido('fecha_nacimiento')}",
-                    )
-                    ver = validar_fecha_nacimiento(v_fnac, fecha_evaluacion)
-                    _pinta("fecha_nacimiento", ver)
-                    editados["fecha_nacimiento"] = (
-                        v_fnac.strftime("%d/%m/%Y") if v_fnac else "", leida
-                    )
-                    veredictos["fecha_nacimiento"] = ver
-
-                    for nom, etiq in (
-                        ("establecimiento_origen", "Establecimiento de origen"),
-                        ("establecimiento_destino", "Establecimiento de destino"),
-                    ):
-                        # Busqueda sobre el registro nacional (RENIPRESS), no
-                        # sobre una lista escrita a mano: un paciente puede venir
-                        # referido desde una posta de Ucayali, y obligar a marcar
-                        # "Otro" en ese caso llena la base de texto libre.
-                        leido_cat = por_nombre[nom].valor or ""
-                        consulta = st.text_input(
-                            f"{etiq} — busca en el registro nacional",
-                            value=leido_cat,
-                            key=f"d_{nom}_q_{doc_id}",
-                            placeholder="parte del nombre o la sigla (ej. INSN)",
-                            help=f"el modelo leyó: {_leido(nom)}",
-                        )
-                        candidatos = (
-                            SISTEMA.buscar_establecimiento(consulta, limite=6)
-                            if consulta
-                            else ()
-                        )
-                        if candidatos:
-                            etiquetas = [e.etiqueta for e in candidatos] + [ETIQUETA_OTRO]
-                            sel = st.radio(
-                                f"coincidencias_{nom}",
-                                options=etiquetas,
-                                key=f"d_{nom}_sel_{doc_id}",
-                                label_visibility="collapsed",
-                            )
-                            if sel == ETIQUETA_OTRO:
-                                elegido = consulta
-                                st.markdown(
-                                    "<div style='font-size:0.72rem;color:#9c4221;"
-                                    "margin-top:-6px;'>⚠ no figura en RENIPRESS · "
-                                    "pendiente de conciliar</div>",
-                                    unsafe_allow_html=True,
-                                )
-                            else:
-                                elegido = next(
-                                    e.nombre for e in candidatos if e.etiqueta == sel
-                                )
-                                cod = next(
-                                    e.codigo for e in candidatos if e.etiqueta == sel
-                                )
-                                st.markdown(
-                                    f"<div style='font-size:0.72rem;color:#22543d;"
-                                    f"margin-top:-6px;'>✅ RENIPRESS {cod}</div>",
-                                    unsafe_allow_html=True,
-                                )
-                        else:
-                            elegido = consulta
-                            if consulta:
-                                st.markdown(
-                                    "<div style='font-size:0.72rem;color:#9c4221;"
-                                    "margin-top:-10px;'>⚠ sin coincidencias en RENIPRESS · "
-                                    "pendiente de conciliar</div>",
-                                    unsafe_allow_html=True,
-                                )
-                        editados[nom] = (elegido, leido_cat)
-                        veredictos[nom] = Veredicto(Estado.VALIDO)
-
-                # ── Campos de texto libre ───────────────────────────────────
-                col_ap1, col_ap2 = st.columns(2)
-                for col, nom, etiq in (
-                    (col_ap1, "apellido_paterno", "Apellido paterno"),
-                    (col_ap2, "apellido_materno", "Apellido materno"),
-                ):
-                    with col:
-                        val = st.text_input(
-                            etiq, value=por_nombre[nom].valor or "",
-                            key=f"d_{nom}_{doc_id}",
-                            help=f"el modelo leyó: {_leido(nom)}",
-                        )
-                        editados[nom] = (val, por_nombre[nom].valor)
-                        veredictos[nom] = Veredicto(Estado.VALIDO)
-
-                st.divider()
-                bloqueantes = [n for n, v in veredictos.items() if v.bloquea_emision]
-                incompletos = [
-                    n for n, v in veredictos.items() if v.estado is Estado.INCOMPLETO
-                ]
-                if bloqueantes:
-                    st.error(
-                        "No se puede emitir el acta: corrige "
-                        + ", ".join(f"**{b}**" for b in bloqueantes)
-                    )
-                elif incompletos:
-                    st.warning(
-                        "Campos a medio escribir: " + ", ".join(incompletos)
-                    )
-
-                revisor = st.text_input(
-                    "Nombre de quien revisa (queda registrado en el acta):",
-                    key=f"rev_{doc_id}",
-                )
-                st.caption(
-                    "El sistema registra el nombre, la fecha y la hora, pero **no verifica "
-                    "la identidad**: eso exige credenciales de acceso o firma digital "
-                    "certificada (RENIEC). Pendiente para el piloto."
-                )
-                confirmar = st.button(
-                    "Confirmar digitalización y generar acta",
-                    type="primary",
-                    disabled=bool(bloqueantes) or not revisor.strip(),
-                    key=f"btn_acta_{doc_id}",
-                )
-
-                if confirmar:
-                    # Toda la logica de clasificar y armar el acta vive en el
-                    # caso de uso. Aqui solo se recogen los valores y se pinta.
-                    acta, pdf = SISTEMA.confirmar.ejecutar(
-                        documento_id=doc_id,
-                        valores_finales={n: v for n, (v, _) in editados.items()},
-                        valores_leidos={n: leido for n, (_, leido) in editados.items()},
-                        revisor=revisor,
-                    )
-                    st.success(
-                        f"Digitalización confirmada por **{acta.revisor}** el "
-                        f"{acta.momento.strftime('%d/%m/%Y a las %H:%M')} · "
-                        f"{acta.automaticos} campos aceptados de la lectura "
-                        f"automática y {acta.corregidos} corregidos a mano."
-                    )
-                    pendientes = [
-                        c.nombre
-                        for c in acta.campos
-                        if c.nombre.startswith("establecimiento")
-                        and c.valor_final
-                        and not SISTEMA.establecimiento_en_catalogo(c.valor_final)
-                    ]
-                    if pendientes:
-                        st.warning(
-                            "Queda pendiente de conciliar contra RENIPRESS: "
-                            + ", ".join(pendientes)
-                        )
-                    st.session_state[f"acta_{doc_id}"] = pdf
-
-                if st.session_state.get(f"acta_{doc_id}"):
-                    st.download_button(
-                        "Descargar acta de digitalización (PDF)",
-                        data=st.session_state[f"acta_{doc_id}"],
-                        file_name=f"acta_digitalizacion_{doc_id}.pdf",
-                        mime="application/pdf",
-                        width="stretch",
-                    )
-
-                total = aciertos + revisiones + errores
-                if total:
-                    c1, c2, c3 = st.columns(3)
-                    c1.metric("Capturados", f"{aciertos}/{total}")
-                    c2.metric("A revisión humana", f"{revisiones}/{total}")
-                    c3.metric("Error no detectado", f"{errores}/{total}")
-
-                st.markdown(
-                    "<div style='background:#edf2f7;border-left:4px solid #4a5568;"
-                    "padding:10px 14px;margin-top:12px;font-size:0.8rem;color:#2d3748;'>"
-                    "<strong>Cómo leer esta tabla.</strong> Un campo en "
-                    "<strong>REVISAR</strong> no es un fallo del sistema: es el sistema "
-                    "diciendo que no se cree lo que leyó, y pidiendo que una persona lo "
-                    "confirme. El único resultado malo es <strong>ERROR</strong> — un dato "
-                    "equivocado que pasó como bueno. Hoy, sin este sistema, todos los "
-                    "campos entran a REFCON tecleados a mano y sin ninguna verificación."
-                    "</div>",
-                    unsafe_allow_html=True,
-                )
-
-                with st.expander("Ver transcripción completa del documento"):
-                    st.text(texto[:4000])
+                _verificacion(lectura, verdad, doc_id)
 
     st.markdown(
         "<div style='background:#f7fafc;border:1px solid #cbd5e0;border-radius:6px;"
