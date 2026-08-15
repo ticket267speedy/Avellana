@@ -1,0 +1,79 @@
+1.- DATOS GENERALES
+
+Fecha: 14/08/2026
+Hora: 16:15
+Tipo de seguro: SIS
+Establecimiento de origen: Hospital Regional del Cusco
+Establecimiento destino: NISN San Borja
+
+Fecha de Nacimiento: 26/02/2012
+Celular: 13202223
+
+2.- IDENTIFICACION DEL USUARIO
+
+N° Historia Clínica: 7-8274
+
+Apellido Paterno: Bautista
+Apellido Materno: Ticona
+Nombres: Yulissa
+Sexo: M
+Edad años: 14
+Edad meses: 1
+Dirección: Galle Balognes 890
+Distrito: El Tambo
+Departamento: Loreto
+
+3.- RESUMEN DE HISTORIA CLINICA
+
+Anamnesis:
+Acude por control programado. Madre refere adherencia irregular al tratamiento en los últimos 3 meses por dificultad para acudir a citas.
+
+T°: 36.4
+P.A.: 108/57
+F.R.: 16
+F.C.: 73
+Peso: 53,6
+
+Examen físico:
+Regular estado general, habitado, ventilando espontaneamente. Adenomen blando depresible.
+
+Examen Auxiliares:
+Hemograma dentro de parametros, se adjuntan resultados de laboratorio e magenes.
+
+Diagnostico 1:
+Diagnostico 2:
+Diagnostico 3:
+
+CIE-10 diagnostico 1:
+CIE-10 diagnostico 2:
+CIE-10 diagnostico 3:
+
+Tratamiento:
+Dornasa alfa 2,5 mg nebulizada c/24h, enzimas pancreaticas con cada comida.
+
+4.- DATOS DE LA REFERENCIA
+
+Fecha en que sera atendido: 07/10/2026
+Nombre de quien lo atendera:
+Dr. Aguirre
+
+Motivo de Referencia:
+Transicion a servicio de adultos
+
+Especialidad de Destino:
+Pediatría
+
+Condicion al inicio del traslado:
+Estable
+
+Responsable de la referencia:
+Drau Marmi
+
+Golegiatura del responsable:
+53062
+
+Persona que recibe:
+
+Fecha de recepcion:
+
+Condiciones del Paciente a la llegada al Establecimiento Destino

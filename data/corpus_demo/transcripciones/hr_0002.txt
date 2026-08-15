@@ -1,0 +1,71 @@
+1.- DATOS GENERALES
+
+Fecha: 14/08/2026
+Hora: 13:45
+Tipo de seguro: SIS
+Establecimiento de origen: Hospital de Emergencias Pediatricas
+Establecimiento destino: INSN San Borja
+
+2.- IDENTIFICACION DEL USUARIO
+
+N° Historia Clínica: 70908
+Apellido Paterno: Rojas
+Apellido Materno: Vilca
+Nombres: Juan Diego
+Sexo: M
+Edad años: 17
+Edad meses: 3
+Dirección: Jr. Grau 282
+Distrito: Ate
+Departamento: La Libertad
+
+3.- RESUMEN DE HISTORIA CLINICA
+
+Anamnesis:
+Paciente con diagnóstico establecido desde la infancia, en seguimiento multidisciplinario. Se solicita continuidad de atención en servicio de adultos.
+
+T°: 58.3
+Examen físico: Regular estado general, hidratado, ventilando espontaneamente. Abdomen blando depresible.
+
+Examenes Auxiliares:
+Hemograma dentro de parametros. Se adjuntan resultados de laboratorio e imagenes.
+
+Diagnostico 1:
+Paralisis cerebral no especificada
+
+CIE-10 diagnostico 1:
+G80.9
+
+Diagnostico 2:
+Neuroligia con manifestaciones pulmonares
+
+CIE-10 diagnostico 2:
+E84.0
+
+Diagnostico 3:
+
+Tratamiento:
+Hidroxiurea 15 mg/kg/día. Acido folico 5 mg diario.
+
+4.- DATOS DE LA REFERENCIA
+
+Fecha en que sera atendido: 02/09/2026
+Nombre de quien lo atendera: Dr. Ramos
+
+Motivo de Referencia:
+Evaluación por especialidad
+
+Especialidad de Destino:
+Cirugia
+
+Condicion al inicio del traslado:
+Estable
+
+Responsable de la referencia:
+Dr. Huaman
+
+Persona que recibe:
+
+Fecha de recepcion:
+
+Condiciones del Paciente a la llegada al Establecimiento Destino

@@ -198,6 +198,19 @@ class LectorNulo(LectorDocumento):
         return ""
 
 
+def _timeout_sondeo(host: str) -> int:
+    """Cuanto esperar al sondeo segun donde este Ollama.
+
+    Contra la propia maquina, 5 segundos sobran: o responde de inmediato o no
+    esta. Contra un Ollama remoto —el caso del tunel en el despliegue— hay que
+    dar mas margen: el primer viaje levanta la conexion del tunel y se ha visto
+    tardar varios segundos. Con 5 se descartaria un Ollama que si estaba, y la
+    pantalla diria "sin modelo" por impaciencia.
+    """
+    es_local = "localhost" in host or "127.0.0.1" in host
+    return 5 if es_local else 15
+
+
 def verificar_disponibilidad(host: str = "http://localhost:11434") -> list[str]:
     """Modelos descargados en Ollama. Lista vacia si no responde.
 
@@ -205,7 +218,9 @@ def verificar_disponibilidad(host: str = "http://localhost:11434") -> list[str]:
     de fallar a mitad de la demo.
     """
     try:
-        with urllib.request.urlopen(f"{host}/api/tags", timeout=5) as r:
+        with urllib.request.urlopen(
+            f"{host}/api/tags", timeout=_timeout_sondeo(host)
+        ) as r:
             datos = json.loads(r.read().decode("utf-8"))
         return [m["name"] for m in datos.get("models", [])]
     except Exception:  # noqa: BLE001 — sondeo, cualquier fallo es "no hay"

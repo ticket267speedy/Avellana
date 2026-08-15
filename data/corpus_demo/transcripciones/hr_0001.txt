@@ -1,0 +1,73 @@
+PERU · Ministerio de Salud
+HOJA DE REFERENCIA
+
+1.- DATOS GENERALES
+
+Fecha: 14/08/2026
+Hora: 13:00
+Tipo de seguro: Particular
+DN: 7231911
+Fecha de Nacimiento: 10/11/2007
+Cellular: 905698006
+
+2.- IDENTIFICACION DEL USUARIO
+
+Hospital Regional de Ucayali
+Establecimiento destino: INSN San Borja
+
+N° Historia Clínica: 30889
+
+Apellido Paterno: Sanchez
+Apellido Materno: Aguirre
+Nombres: Ana Lucia
+Edad anios: 18
+Edad meses: 6
+
+Dirección: Calleria
+Departamento: Arequipa
+
+3.- RESUMEN DE HISTORIA CLINICA
+
+Anamnesis:
+Paciente en control por consultorio externo desde los 7 años. Refiere sintomatología persistente y necesidad de continuar seguimiento especializado.
+
+T*: P.A.: F.R.: F.C.: Peso:
+
+Examen físico: 425/64
+
+Regular estado general, hidratado, ventilando espontaneamente. Abdomen blando depresible.
+
+Examenes Auxiliares:
+Hemograma dentro de parametros. Se adjuntan resultados de laboratorio e imágenes.
+
+Diagnostico 1: Epilepsia focal sintomatica
+CIE-10 diagnostico 1:
+
+Diagnostico 2: CIE-10 diagnostico 2:
+
+Diagnostico 3: CIE-10 diagnostico 3:
+
+Tratamiento:
+Insulina glargina x8 UI nocturna Insulina lispro según conteo de carbohidratos.
+
+4.- DATOS DE LA REFERENCIA
+
+Fecha en que sera atendido: 09/08/2026
+Nombre de quien lo atendera: Dr. Rojas
+Motivo de Referencia:
+Transicion a servicio de adultos
+
+Especialidad de Destino:
+Gineco-Obst
+
+Condicion al inicio del traslado:
+Estable
+
+Responsable de la referencia:
+Dr. Quispe
+
+Persona que recibe:
+
+Fecha de recepcion:
+
+Condiciones del Paciente a la llegada al establecimiento Destino

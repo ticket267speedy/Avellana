@@ -16,6 +16,7 @@ implementaciones concretas es literalmente su trabajo.
 
 from __future__ import annotations
 
+import os
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import date, datetime
@@ -27,6 +28,7 @@ from relevo.aplicacion.digitalizar_documento import (
     DigitalizarDocumento,
 )
 from relevo.aplicacion.priorizar_cohorte import PriorizarCohorte
+from relevo.aplicacion.revisar_corpus import RevisarCorpus
 from relevo.dominio.servicios.calculadora_iut import CalculadoraIUT
 from relevo.dominio.servicios.clasificador_cohorte import ClasificadorCohorte
 from relevo.dominio.entidades.paciente import Paciente
@@ -47,6 +49,7 @@ from relevo.infraestructura.configuracion.catalogo_establecimientos import (
 from relevo.infraestructura.documentos.acta_digitalizacion import (
     generar_acta_pdf_bytes,
 )
+from relevo.infraestructura.corpus.repositorio_archivos import CorpusEnArchivos
 from relevo.infraestructura.fuentes.cohorte_sintetica import CohorteSintetica
 from relevo.infraestructura.llm.extraccion_por_reglas import (
     extraer_de_transcripcion,
@@ -58,6 +61,36 @@ from relevo.infraestructura.llm.lector_ollama import elegir_lectores
 from relevo.infraestructura.persistencia.repositorio_memoria import (
     RepositorioPacientesMemoria,
 )
+
+
+# La raiz del proyecto: `src/relevo/interfaz/arranque.py` -> cuatro niveles.
+RAIZ_DATOS = Path(__file__).resolve().parents[3] / "data"
+
+HOST_OLLAMA_POR_DEFECTO = "http://localhost:11434"
+
+# Variable de entorno que redirige el lector a un Ollama que no es el de esta
+# maquina.
+#
+# POR QUE EXISTE
+# El modelo de vision (qwen3-vl:4b) necesita varios GB de RAM y no hay servidor
+# gratuito donde alojarlo. En el despliegue de Streamlit Cloud, `localhost` es
+# el contenedor de Streamlit, donde no corre Ollama: la pantalla cae en captura
+# manual y nadie llega a ver el modelo trabajando.
+#
+# Con esta variable, la app desplegada puede apuntar al Ollama que ya corre en
+# la maquina de alguien del equipo, expuesto por un tunel. El nucleo no se
+# entera: sigue hablando con un puerto por HTTP como siempre.
+#
+# Ver `docs/DESPLIEGUE.md` para el procedimiento del tunel.
+VARIABLE_HOST_OLLAMA = "RELEVO_OLLAMA_HOST"
+
+
+def _host_ollama(explicito: str | None = None) -> str:
+    """Donde buscar Ollama: lo que pidan, luego el entorno, luego localhost."""
+    if explicito:
+        return explicito.rstrip("/")
+    del_entorno = os.environ.get(VARIABLE_HOST_OLLAMA, "").strip()
+    return del_entorno.rstrip("/") if del_entorno else HOST_OLLAMA_POR_DEFECTO
 
 
 def _adaptar_campos(texto: str) -> Sequence[CampoDigitalizado]:
@@ -100,6 +133,13 @@ class Contenedor:
 
     digitalizar: DigitalizarDocumento
     confirmar: ConfirmarDigitalizacion
+    revisar_corpus: RevisarCorpus
+    corpus: CorpusEnArchivos
+    """El adaptador concreto, para que la pantalla pinte la imagen sin releerla.
+
+    Se expone junto al caso de uso y no en su lugar: todo lo que sea decidir
+    pasa por `revisar_corpus`; esto es solo la ruta del JPEG.
+    """
     politica_plazos: PoliticaPlazos
     lector_disponible: bool
     """False cuando no hay ningun modelo instalado.
@@ -108,6 +148,15 @@ class Contenedor:
     demo: sin lector, el flujo entra en captura manual y todo lo demas sigue
     funcionando igual.
     """
+    host_lector: str
+    """Contra que Ollama se resolvio el lector.
+
+    La pantalla lo muestra porque en el despliegue deja de ser obvio: puede ser
+    esta maquina o la de otra persona al otro lado de un tunel, y quien mira la
+    demo tiene derecho a saber donde se esta ejecutando el modelo.
+    """
+    nombre_lector: str
+    """El modelo elegido, o `sin-modelo` si no habia ninguno."""
 
     def emitir_pasaporte(self, paciente: Paciente, hoy: date) -> bytes:
         """El Pasaporte de Salud 18+ en PDF, listo para imprimir y firmar."""
@@ -137,21 +186,36 @@ class Contenedor:
         )
 
 
-def construir(config: Path | None = None) -> Contenedor:
+def construir(
+    config: Path | None = None, host_ollama: str | None = None
+) -> Contenedor:
     """Arma el sistema completo.
 
     `config` se acepta para poder apuntar a otra carpeta de politica clinica en
     pruebas; por defecto se usa la del proyecto.
+
+    `host_ollama` redirige el lector a otra maquina. Si no se pasa, se lee de
+    la variable de entorno `RELEVO_OLLAMA_HOST`, y en su defecto se usa el
+    Ollama local. Ver `VARIABLE_HOST_OLLAMA`.
     """
-    principal, _contraste = elegir_lectores()
-    hay_lector = getattr(principal, "nombre", "") != "sin-modelo"
+    host = _host_ollama(host_ollama)
+    principal, _contraste = elegir_lectores(host=host)
+    nombre = str(getattr(principal, "nombre", "sin-modelo"))
+    hay_lector = nombre != "sin-modelo"
+
+    digitalizar = DigitalizarDocumento(
+        lector=principal,  # type: ignore[arg-type]
+        extraer=_adaptar_campos,
+    )
+    corpus = CorpusEnArchivos.descubrir(RAIZ_DATOS)
 
     return Contenedor(
-        digitalizar=DigitalizarDocumento(
-            lector=principal,  # type: ignore[arg-type]
-            extraer=_adaptar_campos,
-        ),
+        digitalizar=digitalizar,
         confirmar=ConfirmarDigitalizacion(generar_pdf=_generar_acta),
+        revisar_corpus=RevisarCorpus(corpus=corpus, digitalizar=digitalizar),
+        corpus=corpus,
         politica_plazos=cargar_politica_plazos(),
         lector_disponible=hay_lector,
+        host_lector=host,
+        nombre_lector=nombre,
     )

@@ -1,0 +1,38 @@
+{
+  "n": 4,
+  "semilla_base": 20260814,
+  "reparto": {
+    "foto_manuscrita": 0.6,
+    "escaneo_manuscrito": 0.2,
+    "tipeado": 0.15,
+    "fotocopia": 0.05
+  },
+  "aviso": "Corpus SINTETICO. Ningun dato corresponde a una persona real. La letra es renderizada con fuentes, mas regular que la humana: la exactitud medida aqui es OPTIMISTA respecto de manuscrito real.",
+  "origen_demo": "Subconjunto versionado del corpus completo, para que la pantalla de digitalizacion funcione en el despliegue. Las transcripciones son la salida REAL de qwen3-vl:4b corriendo en local, cacheada; no estan escritas a mano ni editadas.",
+  "muestras": [
+    {
+      "id": "hr_0001",
+      "variante": "foto_manuscrita",
+      "semilla": 20260815,
+      "campos": 37
+    },
+    {
+      "id": "hr_0002",
+      "variante": "tipeado",
+      "semilla": 20260816,
+      "campos": 39
+    },
+    {
+      "id": "hr_0003",
+      "variante": "fotocopia",
+      "semilla": 20260817,
+      "campos": 37
+    },
+    {
+      "id": "hr_0006",
+      "variante": "tipeado",
+      "semilla": 20260820,
+      "campos": 41
+    }
+  ]
+}

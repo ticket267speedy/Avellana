@@ -50,61 +50,80 @@ from relevo.interfaz.arranque import construir
 
 FECHA_HOY_DEFECTO = date(2026, 8, 14)
 
+
+def _host_ollama_configurado() -> str | None:
+    """El Ollama declarado en los secretos del despliegue, si lo hay.
+
+    En Streamlit Cloud no puede correr el modelo de vision: necesita varios GB
+    de RAM y no hay GPU. Para que el equipo pueda ver el modelo trabajando de
+    verdad desde la URL publica, se declara en los secretos de la app la
+    direccion de un Ollama alcanzable —tipicamente el de una maquina del
+    equipo, expuesto por un tunel. Ver `docs/DESPLIEGUE.md`.
+
+    Cuando no hay secreto declarado se devuelve None y `construir` se queda con
+    el Ollama local, que es el comportamiento de siempre en desarrollo.
+    """
+    try:
+        valor = st.secrets.get("RELEVO_OLLAMA_HOST", "")
+    except Exception:  # noqa: BLE001
+        # Sin archivo de secretos, `st.secrets` puede lanzar en vez de devolver
+        # vacio. Correr en local sin secretos es el caso normal, no un error.
+        return None
+    texto = str(valor).strip()
+    return texto or None
+
+
 # El sistema completo, armado una sola vez. Todo lo que esta pantalla necesita
 # del exterior sale de aqui.
-SISTEMA = construir()
+SISTEMA = construir(host_ollama=_host_ollama_configurado())
 
 # ═══════════════════════════════════════════════════════════════════════════
 # CORPUS DE DOCUMENTOS ESCANEADOS (pestaña de digitalización)
+#
+# Todo el acceso al corpus pasa por `SISTEMA.revisar_corpus`. Esta pantalla ya
+# no sabe que existen archivos: pide lecturas y las pinta.
 #
 # La transcripción con el modelo tarda ~2 minutos por documento en CPU, así que
 # se cachea en disco. Una demo que obliga a esperar dos minutos delante de un
 # jurado no es una demo: la caché hace que la pantalla abra instantánea, y el
 # botón de leer en vivo queda para quien quiera ver el modelo trabajando.
 # ═══════════════════════════════════════════════════════════════════════════
-_RUTA_CORPUS = Path(__file__).resolve().parents[4] / "data" / "corpus"
-_CORPUS_DISPONIBLE = (_RUTA_CORPUS / "manifiesto.json").exists()
+_CORPUS = SISTEMA.revisar_corpus
+_CORPUS_DISPONIBLE = _CORPUS.hay_documentos
+_CORPUS_ES_DEMO = _CORPUS.es_muestra_parcial
 
 
-def _muestras_corpus() -> list[dict[str, object]]:
-    datos = json.loads((_RUTA_CORPUS / "manifiesto.json").read_text(encoding="utf-8"))
-    return list(datos.get("muestras", []))
+def _donde_corre_el_modelo() -> tuple[str, str]:
+    """(nivel, mensaje) sobre dónde se está ejecutando el lector.
 
-
-def _variante_de(doc_id: str) -> str:
-    for m in _muestras_corpus():
-        if m.get("id") == doc_id:
-            return str(m.get("variante", ""))
-    return ""
-
-
-def _verdad_de(doc_id: str) -> dict[str, str]:
-    ruta = _RUTA_CORPUS / "verdad" / f"{doc_id}.json"
-    if not ruta.exists():
-        return {}
-    return dict(json.loads(ruta.read_text(encoding="utf-8")))
-
-
-def _transcripcion_de(doc_id: str) -> tuple[str | None, str]:
-    """Devuelve (texto, de_donde_salio). None si aún no se ha leído."""
-    ruta = _RUTA_CORPUS / "transcripciones" / f"{doc_id}.txt"
-    if ruta.exists():
-        return ruta.read_text(encoding="utf-8"), "lectura previa guardada en disco"
-    return None, ""
-
-
-def _transcribir_con_modelo(doc_id: str) -> str:
-    """Lee el documento con el modelo local y guarda el resultado.
-
-    Se propaga cualquier fallo del lector en vez de devolver texto vacío: un
-    documento sin leer y un documento leído como vacío son cosas distintas.
+    En local esto era obvio y no hacía falta decirlo. En el despliegue deja de
+    serlo: el modelo puede estar en el contenedor (nunca), en la máquina de
+    quien mira, o en la de otra persona al otro lado de un túnel. Quien juzga
+    una demo de lectura automática tiene derecho a saber dónde se ejecuta.
     """
-    destino = _RUTA_CORPUS / "transcripciones"
-    destino.mkdir(parents=True, exist_ok=True)
-    imagen = (_RUTA_CORPUS / "imagenes" / f"{doc_id}.jpg").read_bytes()
-    documento = SISTEMA.digitalizar.ejecutar(doc_id, imagen)
-    (destino / f"{doc_id}.txt").write_text(documento.texto, encoding="utf-8")
-    return documento.texto
+    if not SISTEMA.lector_disponible:
+        return (
+            "warning",
+            "**Sin modelo alcanzable.** Se muestran transcripciones ya "
+            "producidas por el modelo y guardadas en disco. La lectura en vivo "
+            "necesita un Ollama accesible; ver `docs/DESPLIEGUE.md`.",
+        )
+    remoto = "localhost" not in SISTEMA.host_lector and "127.0.0.1" not in (
+        SISTEMA.host_lector
+    )
+    if remoto:
+        return (
+            "success",
+            f"**Modelo en vivo:** `{SISTEMA.nombre_lector}` — ejecutándose en "
+            f"una máquina del equipo, alcanzada en `{SISTEMA.host_lector}`. "
+            "El documento viaja a ese equipo y vuelve transcrito.",
+        )
+    return (
+        "success",
+        f"**Modelo en vivo:** `{SISTEMA.nombre_lector}` en esta máquina. "
+        "Ningún documento sale de aquí.",
+    )
+
 
 st.set_page_config(
     page_title="Relevo · Puente 18+ (INSN San Borja)",
@@ -978,8 +997,19 @@ with tab_digital:
     st.markdown("#### Digitalización Asistida de Hoja de Referencia")
     st.caption(
         "Lectura automática de documentos escaneados con verificación en tres capas. "
-        "El procesamiento es local: ningún documento sale de esta máquina."
+        "El procesamiento nunca sale a un servicio externo: el modelo corre en una "
+        "máquina del equipo."
     )
+
+    _nivel, _mensaje = _donde_corre_el_modelo()
+    (st.success if _nivel == "success" else st.warning)(_mensaje)
+
+    if _CORPUS_ES_DEMO:
+        st.info(
+            "Estás viendo la **muestra versionada** del corpus (4 documentos de 12). "
+            "El corpus completo se genera en local y no se sube al repositorio; "
+            "esta muestra existe para que la pantalla funcione en el despliegue."
+        )
 
     if not _CORPUS_DISPONIBLE:
         st.warning(
@@ -987,35 +1017,81 @@ with tab_digital:
             "Genera uno con:  `python -m relevo.interfaz.cli.generar_corpus --n 12`"
         )
     else:
-        muestras_corpus = _muestras_corpus()
         col_sel, col_est = st.columns([2, 3], gap="large")
 
         with col_sel:
             doc_id = st.selectbox(
                 "Documento escaneado:",
-                options=[m["id"] for m in muestras_corpus],
-                format_func=lambda d: f"{d}  ·  {_variante_de(d)}",
+                options=[m.id for m in _CORPUS.muestras()],
+                format_func=lambda d: f"{d}  ·  {_CORPUS.variante_de(d)}",
             )
-            ruta_img = _RUTA_CORPUS / "imagenes" / f"{doc_id}.jpg"
-            if ruta_img.exists():
+            ruta_img = SISTEMA.corpus.ruta_imagen(doc_id)
+            if ruta_img is not None:
                 st.image(str(ruta_img), caption=f"{doc_id}.jpg", width="stretch")
 
         with col_est:
-            texto, origen = _transcripcion_de(doc_id)
+            # Una relectura en vivo sustituye a la caché solo durante esta
+            # sesión del navegador: el archivo en disco se deja intacto.
+            _en_vivo: dict[str, str] = st.session_state.setdefault("lecturas_vivo", {})
+            if doc_id in _en_vivo:
+                resultado = _CORPUS.releer_texto(doc_id, _en_vivo[doc_id])
+            else:
+                resultado = _CORPUS.leer_cacheado(doc_id)
 
-            if texto is None:
+            if resultado is None:
                 st.info(
                     "Este documento aún no se ha leído. La transcripción con el modelo "
-                    "local tarda alrededor de dos minutos en CPU."
+                    "tarda alrededor de dos minutos en CPU."
                 )
-                if st.button("Leer con el modelo ahora", type="primary"):
-                    with st.spinner("Transcribiendo con glm-ocr (local)…"):
-                        texto = _transcribir_con_modelo(doc_id)
-                    st.rerun()
+                if SISTEMA.lector_disponible:
+                    if st.button("Leer con el modelo ahora", type="primary"):
+                        with st.spinner(
+                            f"Transcribiendo con {SISTEMA.nombre_lector}…"
+                        ):
+                            _CORPUS.leer_en_vivo(doc_id)
+                        st.rerun()
+                else:
+                    st.caption(
+                        "No hay ningún modelo alcanzable, así que este documento "
+                        "no se puede leer ahora. Elige otro: los demás ya tienen "
+                        "su transcripción guardada."
+                    )
             else:
-                st.caption(f"Transcripción obtenida de: {origen}")
-                lectura = SISTEMA.digitalizar.desde_texto(doc_id, texto)
-                verdad = _verdad_de(doc_id)
+                if resultado.fue_en_vivo:
+                    st.success(
+                        f"Transcripción recién producida por "
+                        f"`{SISTEMA.nombre_lector}` en esta sesión."
+                    )
+                else:
+                    st.caption(f"Transcripción obtenida de: {resultado.origen}")
+
+                # POR QUE EL BOTON SIGUE AQUI CON LA TRANSCRIPCION YA HECHA
+                # La cache existe para que la pantalla abra al instante, pero
+                # deja al modelo invisible: quien mira la demo ve texto ya
+                # puesto y no tiene forma de comprobar que hay algo leyendo.
+                # Este boton es la prueba en directo, y es la razon de que la
+                # cache no baste por si sola.
+                if SISTEMA.lector_disponible:
+                    if st.button(
+                        "Volver a leer en vivo con el modelo",
+                        key=f"revivo_{doc_id}",
+                        help=(
+                            "Ejecuta el modelo sobre esta imagen ahora mismo. "
+                            "Tarda unos dos minutos en CPU. No borra la "
+                            "transcripción guardada."
+                        ),
+                    ):
+                        with st.spinner(
+                            f"Transcribiendo con {SISTEMA.nombre_lector} — "
+                            "esto tarda un par de minutos…"
+                        ):
+                            _en_vivo[doc_id] = _CORPUS.leer_en_vivo(
+                                doc_id, cachear=False
+                            ).documento.texto
+                        st.rerun()
+
+                lectura = resultado.documento
+                verdad = resultado.verdad
 
                 st.markdown("##### Verificación campo por campo")
                 st.caption(

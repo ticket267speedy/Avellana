@@ -1,11 +1,29 @@
 # ─── DATOS ───
-# Ningun dato de paciente, real o sintetico, entra al repositorio.
-data/
+# Ningun dato de paciente entra al repositorio.
+#
+# Se escribe `data/*` y no `data/` porque git no desciende a un directorio
+# excluido: con `data/` no habria forma de re-incluir nada de dentro.
+data/*
 *.db
 *.sqlite
 *.sqlite3
 salidas/
 *.pdf
+
+# UNICA excepcion: el corpus de demostracion.
+#
+# POR QUE SE VERSIONA UN DIRECTORIO DE `data/`
+# El corpus completo se genera en local y pesa ~9 MB, asi que no se versiona.
+# Pero en Streamlit Cloud nadie puede generarlo, y sin el la pantalla de
+# digitalizacion —la mitad visible del proyecto— sale vacia en el despliegue.
+#
+# Aqui van 4 documentos (2.8 MB) cubriendo las tres variantes de degradacion,
+# con sus transcripciones ya producidas por el modelo local. Nada de esto es
+# dato de paciente: son documentos SINTETICOS generados por
+# `relevo.interfaz.cli.generar_corpus`, sin correspondencia con persona alguna.
+# La regla 1 de CLAUDE.md sigue intacta: lo que prohibe es dato real, y aqui no
+# hay ninguno.
+!data/corpus_demo/
 
 # ─── FUENTES DESCARGADAS ───
 # Las fuentes manuscritas del corpus se descargan, no se versionan:
