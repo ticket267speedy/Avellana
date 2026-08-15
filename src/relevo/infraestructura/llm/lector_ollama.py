@@ -98,18 +98,23 @@ class LectorOllama:
             "prompt": instruccion,
             "images": [a_base64(imagen)],
             "stream": False,
-            # Sin razonamiento previo. MEDIDO, no supuesto:
+            # Pide al modelo no razonar antes de responder.
             #
-            # Los Qwen3 son modelos de razonamiento. Ollama devuelve ese
-            # razonamiento en un campo `thinking` aparte de `response`, y ambos
-            # salen del MISMO presupuesto de `num_predict`. Con el prompt largo
-            # de `construir_instruccion` —catalogo de campos mas glosario de
-            # abreviaturas— el modelo gastaba los 2048 tokens enteros pensando
-            # y devolvia `response` vacio: cuatro minutos para nada, y todos
-            # los campos a null sin que se viera por que.
+            # LO QUE SE MIDIO: los Qwen3 son modelos de razonamiento y Ollama
+            # devuelve ese razonamiento en un campo `thinking` aparte de
+            # `response`. Con un prompt corto de una linea, `qwen3-vl:4b`
+            # devuelve el JSON pedido en ~15 s en esta maquina (CPU, sin GPU).
             #
-            # Con `think: false` el mismo modelo responde el JSON pedido en
-            # unos 15 segundos. Los modelos que no razonan ignoran este campo.
+            # LO QUE NO ARREGLA, Y HAY QUE DECIRLO: con el prompt largo de
+            # `construir_instruccion` —catalogo de campos mas glosario de
+            # abreviaturas— `qwen3-vl:4b` sigue devolviendo `response` VACIO
+            # tras ~200 s, con este campo ya puesto. De modo que el
+            # razonamiento no era la causa unica, o el flag no se honra en
+            # esta version de Ollama. Queda sin diagnosticar.
+            #
+            # Se deja puesto porque no hace danio —los modelos que no razonan
+            # lo ignoran— pero que nadie le atribuya una mejora que no se
+            # midio. `glm-ocr` si responde con el prompt largo.
             #
             # Y NO se usa `thinking` como respuesta de repuesto aunque venga
             # lleno: es el borrador en voz alta del modelo, no su conclusion.
