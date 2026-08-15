@@ -1,0 +1,26 @@
+# Tema de la interfaz.
+#
+# POR QUE SE FIJA Y NO SE DEJA AL GUSTO DEL NAVEGADOR
+# Sin este archivo, Streamlit hereda el tema del sistema operativo de quien
+# abre la pagina. Y todo el CSS de `app.py` esta escrito para fondo claro:
+# tarjetas #ffffff, texto #1a202c, bordes #cbd5e0. En una maquina con el
+# sistema en modo oscuro eso produce tarjetas blancas sobre fondo negro — la
+# pagina se ve rota sin que nadie haya tocado el codigo.
+#
+# Importa mas de lo que parece en una demo: el jurado abre la URL desde SU
+# equipo, y no sabemos como lo tiene configurado. Un tema fijo es la unica
+# forma de que todos vean lo mismo.
+#
+# Los valores no son arbitrarios: son los que el CSS de `app.py` ya usaba.
+#   #1a365d  azul de cabeceras y titulos
+#   #edf2f7  fondo de bloques secundarios y barra lateral
+#   #1a202c  color de texto principal
+[theme]
+base = "light"
+primaryColor = "#1a365d"
+backgroundColor = "#ffffff"
+secondaryBackgroundColor = "#edf2f7"
+textColor = "#1a202c"
+
+[browser]
+gatherUsageStats = false
