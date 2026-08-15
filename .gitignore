@@ -60,6 +60,12 @@ env/
 htmlcov/
 .hypothesis/
 
+# ─── VOLCADOS DE DEPURACION ───
+# Trazas pegadas a mano para diagnosticar algo. Utiles en el momento, ruido
+# permanente en el repositorio: lo que se aprende de ellas va a docs/.
+errores.txt
+*.log
+
 # ─── EDITOR ───
 .vscode/
 .idea/
