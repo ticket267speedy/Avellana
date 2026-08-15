@@ -135,9 +135,21 @@ def test_la_aplicacion_solo_importa_dominio() -> None:
 
 INTERFAZ = RAIZ / "src" / "relevo" / "interfaz"
 
-# Unico archivo autorizado a nombrar implementaciones concretas: la composicion
-# de dependencias. Por definicion las conoce todas; ese es su trabajo.
+# Archivos autorizados a nombrar implementaciones concretas.
+#
+# `arranque.py` es la composicion de dependencias: por definicion las conoce
+# todas, ese es su trabajo.
+#
+# Los CLI cumplen el MISMO papel para la linea de comandos: son puntos de
+# entrada que arman lo que necesitan y arrancan. La excepcion se limita a
+# `interfaz/cli/` y no se extiende a las pantallas, que es donde la fuga hacia
+# afuera hace dano de verdad — una pantalla que conoce adaptadores es una
+# pantalla que no se puede sustituir sin reescribir la orquestacion.
+#
+# Si un CLI crece hasta tener logica propia, esa logica va a un caso de uso.
+# La excepcion cubre el cableado, no la orquestacion.
 ARRANQUE_PERMITIDO = ("relevo/interfaz/arranque.py",)
+CARPETAS_DE_COMPOSICION = ("relevo/interfaz/cli/",)
 
 # Servicios de dominio que la interfaz no debe instanciar. Construir una
 # `CalculadoraIUT` desde una pantalla es hacer de capa de aplicacion sin serlo:
@@ -151,11 +163,16 @@ SERVICIOS_DE_DOMINIO = (
 
 
 def _archivos_de_interfaz() -> list[Path]:
-    return [
-        p
-        for p in modulos_de(INTERFAZ)
-        if not p.as_posix().endswith(ARRANQUE_PERMITIDO)
-    ]
+    """Las pantallas. Excluye los puntos de composicion."""
+    salida: list[Path] = []
+    for p in modulos_de(INTERFAZ):
+        ruta = p.as_posix()
+        if ruta.endswith(ARRANQUE_PERMITIDO):
+            continue
+        if any(carpeta in ruta for carpeta in CARPETAS_DE_COMPOSICION):
+            continue
+        salida.append(p)
+    return salida
 
 
 @pytest.mark.bloqueante

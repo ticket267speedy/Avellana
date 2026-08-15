@@ -42,6 +42,7 @@ import urllib.error
 import urllib.request
 from dataclasses import dataclass, field
 
+from relevo.dominio.puertos.lectura_documento import LectorDocumento
 from relevo.infraestructura.llm.extractor import a_base64
 
 TIMEOUT_SEGUNDOS = 300  # un modelo de vision en CPU puede tardar minutos
@@ -76,9 +77,14 @@ RECOMENDACION_POR_RAM_LIBRE_CPU: dict[str, tuple[str, str]] = {
 }
 
 
-@dataclass(frozen=True, slots=True)
-class LectorOllama:
-    """Un modelo de vision corriendo en Ollama."""
+@dataclass(frozen=True)
+class LectorOllama(LectorDocumento):
+    """Un modelo de vision corriendo en Ollama.
+
+    Implementa el puerto `LectorDocumento` del dominio. Antes era una clase
+    suelta que casualmente tenia los metodos correctos; ahora la relacion es
+    explicita y el sustituirla por otro adaptador esta garantizado por el tipo.
+    """
 
     modelo: str = "qwen3-vl:4b"
     host: str = "http://localhost:11434"
@@ -91,6 +97,14 @@ class LectorOllama:
     @property
     def nombre(self) -> str:
         return f"ollama/{self.modelo}"
+
+    @property
+    def requiere_red(self) -> bool:
+        """False: Ollama corre en la misma maquina.
+
+        Es lo que permite prometer que la lectura funciona con el wifi apagado.
+        """
+        return False
 
     def leer(self, imagen: bytes, instruccion: str) -> str:
         cuerpo = {
@@ -153,8 +167,8 @@ class OllamaNoDisponible(RuntimeError):
     """
 
 
-@dataclass(frozen=True, slots=True)
-class LectorNulo:
+@dataclass(frozen=True)
+class LectorNulo(LectorDocumento):
     """No lee nada y lo dice. El respaldo honesto.
 
     Existe para que el sistema completo pueda correr sin Ollama, sin GPU y sin
@@ -167,10 +181,21 @@ class LectorNulo:
     coherencia, priorizacion, Pasaporte, FHIR— sigue operando igual.
     """
 
-    nombre: str = "sin-modelo"
+    @property
+    def nombre(self) -> str:
+        return "sin-modelo"
+
+    @property
+    def requiere_red(self) -> bool:
+        return False
 
     def leer(self, imagen: bytes, instruccion: str) -> str:  # noqa: ARG002
-        return "{}"
+        """Devuelve texto vacio, y la diferencia con un fallo esta en el nombre.
+
+        No lanza excepcion porque no ha fallado nada: es que no hay modelo. La
+        interfaz consulta `nombre` y avisa que se entra en captura manual.
+        """
+        return ""
 
 
 def verificar_disponibilidad(host: str = "http://localhost:11434") -> list[str]:

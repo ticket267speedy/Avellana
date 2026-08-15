@@ -31,32 +31,7 @@ from relevo.aplicacion.priorizar_cohorte import (
     PriorizarCohorte,
     ResultadoPriorizacion,
 )
-from relevo.dominio.entidades.diagnostico import TipoContacto
-from relevo.dominio.objetos_valor.indice_urgencia import EstadoSemaforo
-from relevo.dominio.servicios.calculadora_iut import CalculadoraIUT
-from relevo.dominio.servicios.clasificador_cohorte import ClasificadorCohorte
-from relevo.infraestructura.configuracion.cargador_yaml import (
-    cargar_parametros_iut,
-    cargar_politica_plazos,
-)
-from relevo.infraestructura.documentos.acta_digitalizacion import (
-    generar_acta_pdf_bytes,
-)
-from relevo.infraestructura.documentos.pdf_reportlab import (
-    generar_pasaporte_pdf_bytes,
-)
-from relevo.infraestructura.fuentes.cohorte_sintetica import CohorteSintetica
-from relevo.infraestructura.configuracion.catalogo_establecimientos import (
-    buscar as buscar_establecimiento,
-)
-from relevo.infraestructura.configuracion.catalogo_establecimientos import (
-    existe_en_catalogo,
-)
-from relevo.infraestructura.llm.extraccion_por_reglas import (
-    INSTRUCCION_TRANSCRIPCION,
-    extraer_de_transcripcion,
-)
-from relevo.infraestructura.llm.validacion_captura import (
+from relevo.aplicacion.validacion_captura import (
     ETIQUETA_OTRO,
     Estado,
     Veredicto,
@@ -65,12 +40,19 @@ from relevo.infraestructura.llm.validacion_captura import (
     validar_fecha_nacimiento,
     validar_numero_hc,
 )
-from relevo.infraestructura.llm.lector_ollama import LectorOllama
-from relevo.infraestructura.persistencia.repositorio_memoria import (
-    RepositorioPacientesMemoria,
-)
+from relevo.dominio.entidades.diagnostico import TipoContacto
+from relevo.dominio.objetos_valor.indice_urgencia import EstadoSemaforo
+
+# Unico punto donde esta pantalla toca el mundo exterior. No importa ningun
+# adaptador concreto: pide casos de uso ya construidos y pinta el resultado.
+# `tests/test_arquitectura.py` verifica que siga siendo asi.
+from relevo.interfaz.arranque import construir
 
 FECHA_HOY_DEFECTO = date(2026, 8, 14)
+
+# El sistema completo, armado una sola vez. Todo lo que esta pantalla necesita
+# del exterior sale de aqui.
+SISTEMA = construir()
 
 # ═══════════════════════════════════════════════════════════════════════════
 # CORPUS DE DOCUMENTOS ESCANEADOS (pestaña de digitalización)
@@ -114,15 +96,15 @@ def _transcripcion_de(doc_id: str) -> tuple[str | None, str]:
 def _transcribir_con_modelo(doc_id: str) -> str:
     """Lee el documento con el modelo local y guarda el resultado.
 
-    Se propaga cualquier fallo de Ollama en vez de devolver texto vacío: un
+    Se propaga cualquier fallo del lector en vez de devolver texto vacío: un
     documento sin leer y un documento leído como vacío son cosas distintas.
     """
     destino = _RUTA_CORPUS / "transcripciones"
     destino.mkdir(parents=True, exist_ok=True)
     imagen = (_RUTA_CORPUS / "imagenes" / f"{doc_id}.jpg").read_bytes()
-    texto = LectorOllama(modelo="glm-ocr").leer(imagen, INSTRUCCION_TRANSCRIPCION)
-    (destino / f"{doc_id}.txt").write_text(texto, encoding="utf-8")
-    return texto
+    documento = SISTEMA.digitalizar.ejecutar(doc_id, imagen)
+    (destino / f"{doc_id}.txt").write_text(documento.texto, encoding="utf-8")
+    return documento.texto
 
 st.set_page_config(
     page_title="Relevo · Puente 18+ (INSN San Borja)",
@@ -333,14 +315,8 @@ st.markdown(
 
 
 def construir_sistema(cantidad: int, hoy: date) -> PriorizarCohorte:
-    """Instancia el caso de uso de forma reactiva al padrón seleccionado."""
-    fuente = CohorteSintetica(cantidad=cantidad, hoy=hoy)
-    repositorio = RepositorioPacientesMemoria(fuente.leer_pacientes())
-    return PriorizarCohorte(
-        repositorio=repositorio,
-        calculadora=CalculadoraIUT(cargar_parametros_iut()),
-        clasificador=ClasificadorCohorte(),
-    )
+    """El caso de uso de priorización para el padrón elegido en pantalla."""
+    return SISTEMA.priorizar(cantidad, hoy)
 
 
 def generar_qr_base64(contenido: str) -> str:
@@ -380,7 +356,7 @@ with st.sidebar:
     )
 
     st.divider()
-    politica = cargar_politica_plazos()
+    politica = SISTEMA.politica_plazos
     st.caption(
         f"**Normativa MINSA cargada:**\n"
         f"- Plazo registro de referencia: 7 días\n"
@@ -782,7 +758,7 @@ with tab_ficha:
         st.caption("Documento clínico de traspaso generado conforme a la RM 214-2018-MINSA.")
 
         # Generar PDF real en bytes
-        pdf_bytes = generar_pasaporte_pdf_bytes(paciente_sel, fecha_evaluacion)
+        pdf_bytes = SISTEMA.emitir_pasaporte(paciente_sel, fecha_evaluacion)
 
         # Previsualización del Pasaporte en Pantalla
         resumen_qr = (
@@ -1038,7 +1014,7 @@ with tab_digital:
                     st.rerun()
             else:
                 st.caption(f"Transcripción obtenida de: {origen}")
-                lectura = extraer_de_transcripcion(texto)
+                lectura = SISTEMA.digitalizar.desde_texto(doc_id, texto)
                 verdad = _verdad_de(doc_id)
 
                 st.markdown("##### Verificación campo por campo")
@@ -1156,7 +1132,9 @@ with tab_digital:
                             help=f"el modelo leyó: {_leido(nom)}",
                         )
                         candidatos = (
-                            buscar_establecimiento(consulta, limite=6) if consulta else ()
+                            SISTEMA.buscar_establecimiento(consulta, limite=6)
+                            if consulta
+                            else ()
                         )
                         if candidatos:
                             etiquetas = [e.etiqueta for e in candidatos] + [ETIQUETA_OTRO]
@@ -1245,48 +1223,33 @@ with tab_digital:
                 )
 
                 if confirmar:
-                    campos_acta = []
-                    for nombre, (valor_final, valor_leido) in editados.items():
-                        final = valor_final.strip()
-                        if not final:
-                            estado_acta = "VACIO"
-                        elif final != (valor_leido or ""):
-                            estado_acta = "CORREGIDO"
-                        else:
-                            estado_acta = "AUTOMATICO"
-                        campos_acta.append(
-                            {
-                                "nombre": nombre,
-                                "valor_final": final,
-                                "valor_leido": valor_leido or "",
-                                "estado": estado_acta,
-                            }
-                        )
-
-                    n_corr = sum(1 for c in campos_acta if c["estado"] == "CORREGIDO")
-                    n_auto = sum(1 for c in campos_acta if c["estado"] == "AUTOMATICO")
-                    momento = datetime.now()
+                    # Toda la logica de clasificar y armar el acta vive en el
+                    # caso de uso. Aqui solo se recogen los valores y se pinta.
+                    acta, pdf = SISTEMA.confirmar.ejecutar(
+                        documento_id=doc_id,
+                        valores_finales={n: v for n, (v, _) in editados.items()},
+                        valores_leidos={n: leido for n, (_, leido) in editados.items()},
+                        revisor=revisor,
+                    )
                     st.success(
-                        f"Digitalización confirmada por **{revisor}** el "
-                        f"{momento.strftime('%d/%m/%Y a las %H:%M')} · "
-                        f"{n_auto} campos aceptados de la lectura automática y "
-                        f"{n_corr} corregidos a mano."
+                        f"Digitalización confirmada por **{acta.revisor}** el "
+                        f"{acta.momento.strftime('%d/%m/%Y a las %H:%M')} · "
+                        f"{acta.automaticos} campos aceptados de la lectura "
+                        f"automática y {acta.corregidos} corregidos a mano."
                     )
                     pendientes = [
-                        c["nombre"]
-                        for c in campos_acta
-                        if c["nombre"].startswith("establecimiento")
-                        and c["valor_final"]
-                        and not existe_en_catalogo(c["valor_final"])
+                        c.nombre
+                        for c in acta.campos
+                        if c.nombre.startswith("establecimiento")
+                        and c.valor_final
+                        and not SISTEMA.establecimiento_en_catalogo(c.valor_final)
                     ]
                     if pendientes:
                         st.warning(
-                            "Queda pendiente de conciliar contra RENAES: "
+                            "Queda pendiente de conciliar contra RENIPRESS: "
                             + ", ".join(pendientes)
                         )
-                    st.session_state[f"acta_{doc_id}"] = generar_acta_pdf_bytes(
-                        documento_id=doc_id, campos=campos_acta, revisor=revisor
-                    )
+                    st.session_state[f"acta_{doc_id}"] = pdf
 
                 if st.session_state.get(f"acta_{doc_id}"):
                     st.download_button(
