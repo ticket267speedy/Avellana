@@ -1,62 +1,108 @@
 # ─────────────────────────────────────────────────────────────────────────────
 # Plazos del ciclo de transicion — POLITICA, NO CODIGO
 #
-# Calibrados con datos peruanos reales, no con intuicion:
+# Calibrados con datos peruanos reales donde los hay, y marcados como
+# PROVISIONAL donde no:
 #   Estudio DIRIS Lima Norte, Revista Medica Herediana — 19 951 referencias.
 #   NT 018-MINSA/DGSP-V.01 — Sistema de Referencia y Contrarreferencia.
 #
 # Cada plazo lleva su justificacion. Un umbral sin fuente es un umbral
 # inventado, y un umbral inventado que dispara alertas falsas mata el sistema:
 # el equipo deja de leer los avisos.
+#
+# v0.2.0 — nueve estados. Los seis originales se conservan al pie en
+# `estados_legado` para poder migrar lo ya persistido sin borrar nada.
 # ─────────────────────────────────────────────────────────────────────────────
 
-version: "0.1.0"
-fecha_revision: "2026-08-14"
+version: "0.2.0"
+fecha_revision: "2026-08-16"
 
 transiciones:
-  - desde: PASAPORTE_EMITIDO
-    hasta: REFERENCIA_REGISTRADA
-    plazo_dias: 7
-    justificacion: >-
-      Tramite puramente administrativo. Registrar la referencia en el sistema
-      no depende de terceros ni de disponibilidad de agenda.
-    fuente: "NT 018-MINSA/DGSP-V.01"
-
-  - desde: REFERENCIA_REGISTRADA
-    hasta: REFERENCIA_ACEPTADA
+  - desde: PREPARACION
+    hasta: REFERENCIA_ENVIADA
     plazo_dias: 30
+    provisional: true
+    justificacion: >-
+      Armar el expediente: Pasaporte firmado, epicrisis, destino propuesto.
+      Treinta dias es lo que parece razonable, no lo que nadie midio.
+    fuente: "PROVISIONAL — TODO: confirmar con mentor"
+
+  - desde: REFERENCIA_ENVIADA
+    hasta: RECEPCION_CONFIRMADA
+    plazo_dias: 7
+    provisional: true
+    justificacion: >-
+      Acuse de recepcion. Es el tramite mas barato de todo el ciclo y aun asi
+      es donde empieza el rechazo silencioso: una referencia que nadie acusa
+      es indistinguible de una que nadie envio.
+    fuente: "Alineado al espiritu de NT 018-MINSA/DGSP-V.01. PROVISIONAL"
+
+  - desde: RECEPCION_CONFIRMADA
+    hasta: EN_EVALUACION
+    plazo_dias: 15
+    provisional: true
+    justificacion: >-
+      Del acuse de recibo a que un medico abra el expediente. Aqui vive el
+      tramo que el modelo de seis estados escondia.
+    fuente: "PROVISIONAL"
+
+  - desde: EN_EVALUACION
+    hasta: ACEPTADO_CON_SERVICIO
+    plazo_dias: 30
+    provisional: true
     justificacion: >-
       Solo el 23.14 % de las referencias se acepta dentro de las 24 horas, y
-      el 13.6 % vuelve rechazada por informacion incompleta. Un plazo corto
-      marcaria como vencido el curso normal del tramite.
-    fuente: "DIRIS Lima Norte, Rev Med Hered — 19 951 referencias"
+      el 13.6 % vuelve por informacion incompleta. Un plazo corto marcaria
+      como vencido el curso normal del tramite.
+    fuente: "DIRIS Lima Norte, Rev Med Hered — 19 951 referencias. PROVISIONAL"
 
-  - desde: REFERENCIA_ACEPTADA
+  - desde: ACEPTADO_CON_SERVICIO
     hasta: CITA_PROGRAMADA
     plazo_dias: 120
+    provisional: false
     justificacion: >-
       La MEDIANA del intervalo aceptacion -> cita es de 80 a 85 dias. Un
-      umbral de 90 dias disparia alerta en la mitad de los casos que van
+      umbral de 90 dias dispararia alerta en la mitad de los casos que van
       completamente bien. 120 dias deja pasar el comportamiento tipico y
       marca solo la cola larga. Este es el numero que mas importa: es la
       diferencia entre un sistema que se lee y uno que se ignora.
     fuente: "DIRIS Lima Norte, Rev Med Hered — mediana 80-85 dias"
 
   - desde: CITA_PROGRAMADA
-    hasta: CITA_CUMPLIDA
-    plazo_dias: 30
-    justificacion: >-
-      Contado desde la fecha de la cita, no desde su programacion. Treinta
-      dias despues de la fecha sin confirmacion de asistencia es inasistencia.
-    fuente: "PLAN_TECNICO §7"
+    hasta: PRIMERA_ATENCION_CONFIRMADA
+    plazo_dias: 7
+    provisional: true
     contado_desde: fecha_cita
-
-  - desde: CITA_CUMPLIDA
-    hasta: CONTRARREFERENCIA
-    plazo_dias: 30
     justificacion: >-
-      Plazo nominal. En la practica casi nunca se cumple: ver nota de abajo.
-    fuente: "NT 018-MINSA/DGSP-V.01"
+      Contado desde la fecha de la cita, no desde su programacion. Siete dias
+      despues de la fecha sin confirmacion de asistencia es una inasistencia
+      que hay que investigar antes de reprogramar a ciegas.
+    fuente: "PROVISIONAL"
+
+  - desde: PERDIDA_DE_SEGUIMIENTO
+    hasta: REINGRESO
+    plazo_dias: 15
+    provisional: true
+    justificacion: >-
+      Quince dias de busqueda activa antes de que el caso se considere frio.
+      No cierra nada: solo marca cuando el equipo deja de estar dentro de
+      plazo.
+    fuente: "PROVISIONAL"
+
+  - desde: REINGRESO
+    hasta: PREPARACION
+    plazo_dias: 7
+    provisional: true
+    justificacion: >-
+      REINGRESO es transitorio. El plazo no mide un tramite: mide cuanto puede
+      tardar el equipo en decidir a que estado de tramite vuelve el caso. Sin
+      este plazo, REINGRESO se convierte en el cajon donde los casos dificiles
+      van a morir sin que nadie lo note.
+    fuente: "PROVISIONAL"
+
+# PRIMERA_ATENCION_CONFIRMADA no lleva plazo: es terminal-exitoso. Terminal no
+# es inmutable — desde ahi todavia se puede caer a REINGRESO— pero mientras el
+# ciclo este ahi no hay nada que vigilar.
 
 # ═════════════════════════════════════════════════════════════════════════════
 # DOBLE FUENTE DE CONFIRMACION — PLAN_TECNICO §7
@@ -66,7 +112,7 @@ transiciones:
 # contrarreferencia para dar por cerrado el ciclo es esperar algo que en 99
 # de cada 100 casos no va a llegar.
 #
-# Por eso el estado CITA_CUMPLIDA admite dos fuentes, y el indicador se
+# Por eso PRIMERA_ATENCION_CONFIRMADA admite tres fuentes, y el indicador se
 # desagrega por fuente: la proporcion de cada una es en si misma un hallazgo
 # del piloto, no un detalle de implementacion.
 # ═════════════════════════════════════════════════════════════════════════════
@@ -75,9 +121,13 @@ fuentes_confirmacion:
     tipo: formal
     proporcion_esperada: 0.0055
     fuente: "110 / 19 951 — DIRIS Lima Norte"
+  CONFIRMACION_RECEPTOR:
+    tipo: receptor
+    proporcion_esperada: null   # lo que el piloto viene a medir
+    fuente: "Un clic del profesional receptor en su propia bandeja"
   CONFIRMACION_FAMILIA:
     tipo: pragmatica
-    proporcion_esperada: null   # es lo que el piloto viene a medir
+    proporcion_esperada: null
     fuente: "WhatsApp o llamada telefonica al contacto verificado"
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -91,3 +141,26 @@ preaviso:
   fraccion_restante: 0.25
   # Nunca avisar con menos de esto, aunque la fraccion de al menos.
   minimo_dias: 3
+
+# ═════════════════════════════════════════════════════════════════════════════
+# MIGRACION DE LOS SEIS ESTADOS ORIGINALES
+#
+# Nada se borra. Todo valor viejo persistido tiene destino. Borrar filas para
+# simplificar una migracion es perder justamente el historico que el piloto
+# viene a medir.
+#
+# La tabla ejecutable es `ESTADOS_LEGADO` en
+# `dominio/objetos_valor/estado_ciclo.py`; esto es su documentacion clinica.
+# ═════════════════════════════════════════════════════════════════════════════
+estados_legado:
+  PASAPORTE_EMITIDO: PREPARACION
+  REFERENCIA_REGISTRADA: REFERENCIA_ENVIADA
+  # El estado viejo agrupaba acuse, evaluacion y aceptacion. Se migra al mas
+  # avanzado de los tres porque es el que el dato viejo garantizaba.
+  REFERENCIA_ACEPTADA: ACEPTADO_CON_SERVICIO
+  CITA_PROGRAMADA: CITA_PROGRAMADA
+  CITA_CUMPLIDA: PRIMERA_ATENCION_CONFIRMADA
+  # La contrarreferencia era el terminal burocratico. En el modelo nuevo el
+  # hecho que importa es que el paciente fue atendido; la contrarreferencia es
+  # la via por la que nos enteramos, y eso lo guarda FuenteConfirmacion.
+  CONTRARREFERENCIA: PRIMERA_ATENCION_CONFIRMADA

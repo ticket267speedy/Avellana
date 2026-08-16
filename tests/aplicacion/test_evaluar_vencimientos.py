@@ -11,7 +11,11 @@ from datetime import date, timedelta
 
 from relevo.aplicacion.despachar_avisos import DespacharAvisos
 from relevo.aplicacion.evaluar_vencimientos import EvaluarVencimientos
-from relevo.dominio.entidades.ciclo_transicion import CicloTransicion, EstadoCiclo
+from relevo.dominio.entidades.ciclo_transicion import (
+    CicloTransicion,
+    EstadoCiclo,
+    FuenteConfirmacion,
+)
 from relevo.dominio.eventos import PlazoPorVencer, PlazoVencido
 from relevo.dominio.puertos.notificacion import (
     CanalNotificacion,
@@ -31,13 +35,30 @@ DESTINATARIO = "coordinacion@insnsb.gob.pe"
 # cosas a la vez y falla cuando cambia cualquiera.
 POLITICA = PoliticaPlazos(
     dias_por_estado={
-        EstadoCiclo.PASAPORTE_EMITIDO: 7,
-        EstadoCiclo.REFERENCIA_REGISTRADA: 15,
-        EstadoCiclo.REFERENCIA_ACEPTADA: 120,
+        EstadoCiclo.PREPARACION: 7,
+        EstadoCiclo.REFERENCIA_ENVIADA: 15,
+        EstadoCiclo.RECEPCION_CONFIRMADA: 15,
+        EstadoCiclo.EN_EVALUACION: 30,
+        EstadoCiclo.ACEPTADO_CON_SERVICIO: 120,
         EstadoCiclo.CITA_PROGRAMADA: 30,
-        EstadoCiclo.CITA_CUMPLIDA: 30,
+        EstadoCiclo.PERDIDA_DE_SEGUIMIENTO: 15,
+        EstadoCiclo.REINGRESO: 7,
     }
 )
+
+
+def _hasta_aceptacion(ciclo: CicloTransicion, aceptada: date) -> None:
+    """Recorre los cuatro pasos de tramite hasta ACEPTADO_CON_SERVICIO.
+
+    El modelo de nueve estados separa acuse, evaluacion y aceptacion, que antes
+    eran un solo estado. Lo que estos tests miden son los plazos, no el grafo:
+    el recorrido se hace aqui para que un cambio en el grafo no rompa tests que
+    no hablan de el.
+    """
+    ciclo.avanzar(EstadoCiclo.REFERENCIA_ENVIADA, ciclo.fecha_inicio + timedelta(days=1))
+    ciclo.avanzar(EstadoCiclo.RECEPCION_CONFIRMADA, ciclo.fecha_inicio + timedelta(days=2))
+    ciclo.avanzar(EstadoCiclo.EN_EVALUACION, ciclo.fecha_inicio + timedelta(days=3))
+    ciclo.avanzar(EstadoCiclo.ACEPTADO_CON_SERVICIO, aceptada)
 
 
 def _repositorio(*ciclos: CicloTransicion) -> RepositorioCiclosMemoria:
@@ -100,7 +121,7 @@ def test_al_superar_el_plazo_se_emite_plazo_vencido() -> None:
     evento = r.vencidos[0]
     assert isinstance(evento, PlazoVencido)
     assert evento.paciente_id == "PAC-2"
-    assert evento.estado is EstadoCiclo.PASAPORTE_EMITIDO
+    assert evento.estado is EstadoCiclo.PREPARACION
     assert evento.dias_de_retraso == 33          # 40 transcurridos - 7 de plazo
     assert evento.destinatario == DESTINATARIO
     assert evento.ocurrido_en == HOY
@@ -123,8 +144,7 @@ def test_el_plazo_largo_de_la_cita_no_dispara_antes_de_tiempo() -> None:
     """Los 120 dias entre aceptacion y cita salen de la mediana peruana de
     80-85. Un umbral de 90 dispararia en la mitad de los casos que van bien."""
     ciclo = CicloTransicion(paciente_id="PAC-4", fecha_inicio=HOY - timedelta(days=200))
-    ciclo.avanzar(EstadoCiclo.REFERENCIA_REGISTRADA, HOY - timedelta(days=195))
-    ciclo.avanzar(EstadoCiclo.REFERENCIA_ACEPTADA, HOY - timedelta(days=85))
+    _hasta_aceptacion(ciclo, HOY - timedelta(days=85))
 
     r = _caso(ciclo).ejecutar(HOY, destinatario=DESTINATARIO)
     assert r.vencidos == ()
@@ -132,31 +152,23 @@ def test_el_plazo_largo_de_la_cita_no_dispara_antes_de_tiempo() -> None:
 
 def test_a_los_130_dias_la_cita_si_esta_vencida() -> None:
     ciclo = CicloTransicion(paciente_id="PAC-5", fecha_inicio=HOY - timedelta(days=300))
-    ciclo.avanzar(EstadoCiclo.REFERENCIA_REGISTRADA, HOY - timedelta(days=295))
-    ciclo.avanzar(EstadoCiclo.REFERENCIA_ACEPTADA, HOY - timedelta(days=130))
+    _hasta_aceptacion(ciclo, HOY - timedelta(days=130))
 
     r = _caso(ciclo).ejecutar(HOY, destinatario=DESTINATARIO)
     assert len(r.vencidos) == 1
-    assert r.vencidos[0].estado is EstadoCiclo.REFERENCIA_ACEPTADA
+    assert r.vencidos[0].estado is EstadoCiclo.ACEPTADO_CON_SERVICIO
     assert r.vencidos[0].dias_de_retraso == 10
 
 
 def test_un_ciclo_cerrado_no_tiene_plazo_que_vigilar() -> None:
     ciclo = CicloTransicion(paciente_id="PAC-6", fecha_inicio=HOY - timedelta(days=400))
-    for estado, atras in (
-        (EstadoCiclo.REFERENCIA_REGISTRADA, 395),
-        (EstadoCiclo.REFERENCIA_ACEPTADA, 380),
-        (EstadoCiclo.CITA_PROGRAMADA, 300),
-    ):
-        ciclo.avanzar(estado, HOY - timedelta(days=atras))
+    _hasta_aceptacion(ciclo, HOY - timedelta(days=380))
+    ciclo.avanzar(EstadoCiclo.CITA_PROGRAMADA, HOY - timedelta(days=300))
     ciclo.avanzar(
-        EstadoCiclo.CITA_CUMPLIDA,
+        EstadoCiclo.PRIMERA_ATENCION_CONFIRMADA,
         HOY - timedelta(days=290),
-        fuente_confirmacion=__import__(
-            "relevo.dominio.entidades.ciclo_transicion", fromlist=["FuenteConfirmacion"]
-        ).FuenteConfirmacion.CONFIRMACION_FAMILIA,
+        fuente_confirmacion=FuenteConfirmacion.CONFIRMACION_FAMILIA,
     )
-    ciclo.avanzar(EstadoCiclo.CONTRARREFERENCIA, HOY - timedelta(days=280))
 
     r = _caso(ciclo).ejecutar(HOY, destinatario=DESTINATARIO)
     assert r.eventos == ()

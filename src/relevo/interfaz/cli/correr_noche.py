@@ -44,17 +44,19 @@ def _ciclos_de_ejemplo(hoy: date) -> list[CicloTransicion]:
     """
     ciclos: list[CicloTransicion] = []
 
-    # Vencido de sobra: registro de referencia parado 40 dias (plazo: 7).
+    # Vencido de sobra: preparacion parada 40 dias (plazo: 30).
     c1 = CicloTransicion(paciente_id="PAC-0042", fecha_inicio=hoy - timedelta(days=40))
     ciclos.append(c1)
 
     # Aceptada hace 130 dias sin cita programada (plazo: 120).
     c2 = CicloTransicion(paciente_id="PAC-0117", fecha_inicio=hoy - timedelta(days=200))
-    c2.avanzar(EstadoCiclo.REFERENCIA_REGISTRADA, hoy - timedelta(days=195))
-    c2.avanzar(EstadoCiclo.REFERENCIA_ACEPTADA, hoy - timedelta(days=130))
+    c2.avanzar(EstadoCiclo.REFERENCIA_ENVIADA, hoy - timedelta(days=195))
+    c2.avanzar(EstadoCiclo.RECEPCION_CONFIRMADA, hoy - timedelta(days=190))
+    c2.avanzar(EstadoCiclo.EN_EVALUACION, hoy - timedelta(days=180))
+    c2.avanzar(EstadoCiclo.ACEPTADO_CON_SERVICIO, hoy - timedelta(days=130))
     ciclos.append(c2)
 
-    # Recien emitido: en plazo, no debe generar aviso.
+    # Recien abierto: en plazo, no debe generar aviso.
     ciclos.append(
         CicloTransicion(paciente_id="PAC-0203", fecha_inicio=hoy - timedelta(days=2))
     )

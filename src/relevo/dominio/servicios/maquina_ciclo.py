@@ -27,6 +27,124 @@ from enum import Enum
 
 from relevo.dominio.entidades.ciclo_transicion import CicloTransicion, EstadoCiclo
 from relevo.dominio.excepciones import ConfiguracionIncompleta
+from relevo.dominio.objetos_valor.responsable import Responsable, responsable_de
+
+
+@dataclass(frozen=True, slots=True)
+class EntradaTabla:
+    """Una fila de la tabla del ciclo: quien responde, en cuanto tiempo y por que.
+
+    `fuente` no es documentacion decorativa. La regla 7 del proyecto exige que
+    cada umbral diga de donde salio, y `provisional` marca sin ambiguedad los
+    que todavia no tienen respaldo: un plazo provisional presentado como
+    calibrado es como se pierde la credibilidad delante de un jurado clinico.
+    """
+
+    responsable: Responsable
+    plazo_dias: int | None
+    fuente: str
+    provisional: bool = True
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# LA TABLA DEL CICLO — responsable y plazo por estado
+#
+# El grafo de transiciones vive en `objetos_valor/estado_ciclo.py`, que es la
+# capa que tanto la entidad como este servicio pueden importar. Aqui esta la
+# otra mitad: a quien le toca y cuanto tiempo tiene. Las dos mitades se
+# comprueban entre si al final de este bloque.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+TABLA_CICLO: dict[EstadoCiclo, EntradaTabla] = {
+    EstadoCiclo.PREPARACION: EntradaTabla(
+        responsable=Responsable.EQUIPO_INSN,
+        plazo_dias=30,
+        # TODO: confirmar con mentor — cuanto tarda de verdad el equipo en
+        # armar un expediente completo. 30 dias es lo que parece razonable, no
+        # lo que nadie midio.
+        fuente="Provisional. TODO: confirmar con mentor",
+    ),
+    EstadoCiclo.REFERENCIA_ENVIADA: EntradaTabla(
+        responsable=Responsable.HOSPITAL_RECEPTOR,
+        plazo_dias=7,
+        fuente=(
+            "Acuse de recepcion. Provisional, alineado al espiritu de "
+            "NT 018-MINSA/DGSP-V.01"
+        ),
+    ),
+    EstadoCiclo.RECEPCION_CONFIRMADA: EntradaTabla(
+        responsable=Responsable.HOSPITAL_RECEPTOR,
+        plazo_dias=15,
+        fuente="Provisional",
+    ),
+    EstadoCiclo.EN_EVALUACION: EntradaTabla(
+        responsable=Responsable.HOSPITAL_RECEPTOR,
+        plazo_dias=30,
+        fuente="Provisional",
+    ),
+    EstadoCiclo.ACEPTADO_CON_SERVICIO: EntradaTabla(
+        responsable=Responsable.HOSPITAL_RECEPTOR,
+        plazo_dias=120,
+        # El unico plazo de la tabla que NO es provisional, y el que mas
+        # importa: un umbral de 90 dias dispararia alerta en la mitad de los
+        # casos que van perfectamente bien.
+        fuente=(
+            "Calibrado sobre mediana 80-85 d aceptacion->cita "
+            "(DIRIS Lima Norte, Rev Med Hered, 19 951 referencias)"
+        ),
+        provisional=False,
+    ),
+    EstadoCiclo.CITA_PROGRAMADA: EntradaTabla(
+        responsable=Responsable.PACIENTE,
+        plazo_dias=7,
+        # Contado desde la FECHA DE LA CITA, no desde su programacion. Ver
+        # `MaquinaCiclo._fecha_referencia`.
+        fuente="Fecha de cita + 7 d. El receptor confirma asistencia",
+    ),
+    EstadoCiclo.PRIMERA_ATENCION_CONFIRMADA: EntradaTabla(
+        responsable=Responsable.NADIE,
+        plazo_dias=None,
+        fuente="Terminal-exitoso: no hay plazo que vigilar",
+        provisional=False,
+    ),
+    EstadoCiclo.PERDIDA_DE_SEGUIMIENTO: EntradaTabla(
+        responsable=Responsable.EQUIPO_INSN,
+        plazo_dias=15,
+        fuente="Provisional",
+    ),
+    EstadoCiclo.REINGRESO: EntradaTabla(
+        responsable=Responsable.EQUIPO_INSN,
+        plazo_dias=7,
+        # REINGRESO es transitorio: el plazo no mide un tramite, mide cuanto
+        # puede tardar el equipo en decidir a que estado vuelve el caso.
+        fuente="7 d para reclasificar. Provisional",
+    ),
+}
+
+
+# Las dos mitades de la tabla tienen que hablar del mismo ciclo. Se comprueba
+# al importar y no en un test: si alguien anade un estado y se olvida de una de
+# las dos mitades, el fallo tiene que aparecer al arrancar, no al recordar.
+_desalineados = [
+    estado.name
+    for estado in EstadoCiclo
+    if estado not in TABLA_CICLO or responsable_de(estado) is not TABLA_CICLO[estado].responsable
+]
+if _desalineados:  # pragma: no cover - red de seguridad de desarrollo
+    raise RuntimeError(
+        "La tabla del ciclo y la tabla de responsables no coinciden en: "
+        + ", ".join(_desalineados)
+    )
+
+
+def plazo_de_referencia(estado: EstadoCiclo) -> int | None:
+    """El plazo de la tabla, para quien no cargo la politica desde el YAML.
+
+    NO es el valor que usa la produccion: eso lo carga `PoliticaPlazos` desde
+    `config/plazos_ciclo.yaml`. Esto es la tabla de referencia documentada,
+    util para pintar la interfaz y para explicar de donde sale cada numero.
+    """
+    return TABLA_CICLO[estado].plazo_dias
 
 
 class SituacionPlazo(Enum):
@@ -103,6 +221,18 @@ class EvaluacionPlazo:
     fecha_limite: date | None
 
     @property
+    def responsable(self) -> Responsable:
+        """A quien le toca destrabar esto.
+
+        Va en la evaluacion y no solo en la entidad porque es lo que hace util
+        al aviso: "PAC-0042 vencido" obliga a que alguien abra el expediente
+        para saber si le toca; "PAC-0042 vencido — turno del hospital receptor"
+        se resuelve leyendo el correo. Es el entregable 1 de la rubrica del
+        INSN y su Insight 5, los dos a la vez.
+        """
+        return responsable_de(self.estado)
+
+    @property
     def dias_restantes(self) -> int | None:
         if self.plazo_dias is None:
             return None
@@ -118,15 +248,16 @@ class EvaluacionPlazo:
         if self.situacion is SituacionPlazo.CERRADO:
             return f"{self.paciente_id}: ciclo cerrado"
         restantes = self.dias_restantes
+        turno = f" — turno de {self.responsable.etiqueta}"
         if self.situacion is SituacionPlazo.VENCIDO:
             return (
                 f"{self.paciente_id}: {self.estado.etiqueta} vencido hace "
-                f"{-(restantes or 0)} dias"
+                f"{-(restantes or 0)} dias{turno}"
             )
         if self.situacion is SituacionPlazo.POR_VENCER:
             return (
                 f"{self.paciente_id}: {self.estado.etiqueta} vence en "
-                f"{restantes} dias"
+                f"{restantes} dias{turno}"
             )
         return f"{self.paciente_id}: {self.estado.etiqueta} en plazo"
 

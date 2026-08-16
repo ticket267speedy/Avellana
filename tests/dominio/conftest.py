@@ -122,21 +122,28 @@ def parametros_iut_provisionales() -> ParametrosIUT:
 
 
 def politica_plazos_provisional() -> PoliticaPlazos:
-    """Copia de `config/plazos_ciclo.yaml` v0.1.0."""
+    """Copia de `config/plazos_ciclo.yaml` v0.2.0 — nueve estados."""
     return PoliticaPlazos(
         dias_por_estado={
-            # Tramite puramente administrativo (NT 018-MINSA/DGSP-V.01).
-            EstadoCiclo.PASAPORTE_EMITIDO: 7,
+            # Armar el expediente. PROVISIONAL: nadie lo midio.
+            EstadoCiclo.PREPARACION: 30,
+            # Acuse de recepcion. Alineado a NT 018-MINSA/DGSP-V.01.
+            EstadoCiclo.REFERENCIA_ENVIADA: 7,
+            # Del acuse a que un medico abra el expediente. PROVISIONAL.
+            EstadoCiclo.RECEPCION_CONFIRMADA: 15,
             # Solo el 23.14 % se acepta en 24 h; el 13.6 % vuelve por
             # informacion incompleta (DIRIS Lima Norte).
-            EstadoCiclo.REFERENCIA_REGISTRADA: 30,
-            # Mediana observada aceptacion -> cita: 80 a 85 dias.
-            EstadoCiclo.REFERENCIA_ACEPTADA: 120,
+            EstadoCiclo.EN_EVALUACION: 30,
+            # Mediana observada aceptacion -> cita: 80 a 85 dias. El unico
+            # plazo de la tabla que no es provisional.
+            EstadoCiclo.ACEPTADO_CON_SERVICIO: 120,
             # Contado desde la fecha de la cita, no desde su programacion.
-            EstadoCiclo.CITA_PROGRAMADA: 30,
-            # Plazo nominal. En la practica casi nunca se cumple: la
-            # contrarreferencia llega en el 0.55 % de los casos.
-            EstadoCiclo.CITA_CUMPLIDA: 30,
+            EstadoCiclo.CITA_PROGRAMADA: 7,
+            # Busqueda activa antes de que el caso se considere frio.
+            EstadoCiclo.PERDIDA_DE_SEGUIMIENTO: 15,
+            # REINGRESO es transitorio: esto mide cuanto tarda el equipo en
+            # decidir a que estado de tramite vuelve el caso.
+            EstadoCiclo.REINGRESO: 7,
         },
         fraccion_preaviso=0.25,
         minimo_dias_preaviso=3,
