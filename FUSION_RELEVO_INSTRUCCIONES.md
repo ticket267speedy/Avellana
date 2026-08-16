@@ -1,12 +1,63 @@
 # Relevo — Instrucciones de fusión para Claude Code
 
+> ## 🟢 ESTADO DE AVANCE — actualizado por Claude Code, 16 ago 2026
+>
+> Rama: **`fusion/entrenate-receptor`** · empujada a `origin` · **262 tests en verde** · `mypy --strict` limpio sobre `dominio/` y `aplicacion/`.
+>
+> | CP | Estado | Commit |
+> |---|---|---|
+> | **C0** Rama y punto de partida | ✅ **HECHO** | `e3abf2b` |
+> | **C1** Dominio: 9 estados, `Responsable`, transiciones, reingreso, corte etario | ✅ **HECHO** | `5bd6629` |
+> | **C2** Dominio: aprendizaje, conciliación, consentimiento | ✅ **HECHO** | `06b67b3` |
+> | **C3** Infra: mappers, `sembrar_demo`, auditoría, semilla Hunter, migración | ✅ **HECHO** | `dcf5307` |
+> | **C4** API FastAPI + tests de contrato | ✅ **HECHO** | `8820c71` |
+> | **C5** Frontend: 7 vistas + barra demo | ✅ **HECHO** | `6c0a95f` |
+> | **C6** Autenticación, roles y deudas | 🟡 **PARCIAL** | `e520a70` |
+> | **C7** FHIR CorePE | ⬜ **PENDIENTE** | — |
+>
+> **Cada sección de abajo lleva su marca.** Leyenda: ✅ hecho y verificado · 🟡 parcial · ⬜ pendiente.
+>
+> ### Lo que falta, en orden de valor
+>
+> 1. ⬜ **§8.3 Autenticación** — usuario + contraseña argon2id, cookie de sesión de servidor `HttpOnly` / `SameSite=Strict`. Hoy el rol viaja en la cabecera `X-Relevo-Rol` y **el servidor le cree al cliente**. Está declarado como pendiente en la pantalla de entrada y en la barra de demo, no fingido. `argon2-cffi` ya está instalado.
+> 2. ⬜ **`tests/infraestructura/test_privacidad_whatsapp.py`** — el adaptador ya es ruta única (T6 hecho), así que ahora el test certificaría el canal vivo. Falta escribirlo, más el test de arquitectura que falla si el dominio de WhatsApp aparece fuera del adaptador.
+> 3. ⬜ **Pendiente 3 de rúbrica** — checklist con los seis ítems literales del INSN (diagnóstico · tratamiento · medicamentos · señales de alerta · documentos · servicio de destino), alimentando el mismo factor `x5`.
+> 4. ⬜ **Pendiente 5 de rúbrica** — sección psicosocial del Pasaporte.
+> 5. ⬜ **Streamlit reenfocado** — `app.py` sigue teniendo pantallas que la interfaz nueva ya cubre. Hay que quitárselas y dejarlo como sala de máquinas (digitalización, corpus, métricas, auditoría). **No se borra.**
+> 6. ⬜ **README** con las brechas de §8.1 declaradas y la tabla de "qué es cada cosa".
+> 7. ⬜ **`docs/INFORME_FUSION.md`** (§14).
+> 8. ⬜ **C7 · FHIR CorePE** (T8).
+>
+> ### Decisiones que tomé y conviene no deshacer
+>
+> - **El grafo de transiciones vive en `objetos_valor/estado_ciclo.py`**, no en `maquina_ciclo.py` como decía §4.3. Motivo: lo necesitan tanto la entidad `CicloTransicion` (que valida cada avance) como el servicio de plazos, y `objetos_valor/` es la única capa que las dos pueden importar sin invertir la dirección de las dependencias. La **otra mitad** de la tabla —responsable, plazo y fuente por estado— sí está en `maquina_ciclo.py` como `TABLA_CICLO`, y las dos mitades se comprueban entre sí al importarse.
+> - **`CicloTransicion` lleva `fecha_nacimiento`.** Sin ella no se puede evaluar el corte etario ni `acciones_permitidas`, y el profesional receptor ve el ciclo sin tener acceso al expediente del paciente. Donde falta, el sistema **se pone en el peor caso**: sin poder demostrar que el paciente es menor de 18, las acciones clínicas quedan prohibidas.
+> - **`FuenteConfirmacion` tiene una tercera vía: `CONFIRMACION_RECEPTOR`.** Entre la contrarreferencia formal (0.55 %) y llamar a la familia no había nada. Un clic del receptor en su propia bandeja es la confirmación más barata y más fiable de las tres.
+> - **El motivo del caso Hunter es `NO_EXISTE_SERVICIO_ADULTO`**, que es como se llama en el enum del dominio; §6.6 lo nombra `NO_EXISTE_SERVICIO_ADULTO_EQUIVALENTE`. Es el mismo motivo.
+> - **Los 404 de paciente y de ciclo comparten un único mensaje.** El test de aislamiento encontró una fuga real: "no existe" y "no es tuyo" devolvían cuerpos distintos, así que seguían siendo distinguibles aunque los dos fueran 404.
+> - **`docs/ESTADO_DOLORES.md` no existe** en el repositorio, aunque §0 pide leerlo.
+>
+> ### Cómo levantarlo
+>
+> ```bash
+> python -m relevo.interfaz.cli.sembrar --reiniciar --si-estoy-seguro
+> uvicorn relevo.interfaz.api.principal:app --host 0.0.0.0 --port 8000
+> ```
+>
+> Verificado sobre el servidor real: los 20 estáticos, los 11 endpoints y el PDF del Pasaporte responden 200.
+
+---
+
+
 **Destinatario:** Claude Code, trabajando sobre el repositorio local de Relevo.
 **Fecha:** 16 ago 2026
 **Autoridad:** este documento manda sobre cualquier decisión previa **salvo** las reglas inviolables de `CLAUDE.md`, que siguen intactas y no se negocian.
 
 ---
 
-## 0. Lee esto antes de tocar nada
+## 0. Lee esto antes de tocar nada — ✅ HECHO
+
+> Los 93 tests de partida estaban en verde antes de escribir una línea. `docs/ESTADO_DOLORES.md` **no existe** en el repositorio.
 
 1. Lee `CLAUDE.md` completo. Las 8 reglas inviolables aplican a todo lo que sigue.
 2. Lee `docs/PLAN_TECNICO.md`.
@@ -17,7 +68,7 @@
 
 ---
 
-## 1. Qué está pasando y por qué
+## 1. Qué está pasando y por qué — ✅ leído
 
 El equipo presentó en paralelo un segundo MVP (Vanilla JS + LocalStorage, sin arquitectura). Ese código **no se reutiliza**: tres archivos de ~2000 líneas sin capas no se pueden integrar limpiamente y el costo de desenredarlo supera el de reescribirlo.
 
@@ -44,7 +95,9 @@ Lo que se conserva del núcleo actual, sin excepción: **arquitectura hexagonal,
 
 ---
 
-## 2. Rama y seguridad del trabajo
+## 2. Rama y seguridad del trabajo — ✅ HECHO
+
+> Rama `fusion/entrenate-receptor` creada y empujada. Un commit por checkpoint. `main` y la rama de Ollama sin tocar.
 
 ```bash
 git status                      # debe estar limpio; si no, commitea o guarda antes
@@ -61,7 +114,9 @@ git switch -c fusion/entrenate-receptor
 
 ## 3. Dos principios que deben quedar escritos en el código
 
-### 3.1 · Corte etario y reingreso
+### 3.1 · Corte etario y reingreso — ✅ HECHO
+
+> Escrito como docstring de `dominio/objetos_valor/estado_ciclo.py`, con el `# TODO: confirmar con mentor` incluido.
 
 Esto resuelve una confusión que ya costó tiempo. Escríbelo como docstring del módulo de estados.
 
@@ -78,7 +133,11 @@ Esto resuelve una confusión que ya costó tiempo. Escríbelo como docstring del
 # contrarreferencia y esa obligacion no caduca con la edad del paciente.
 ```
 
-### 3.2 · Cero doble digitación — **restricción de producto, no preferencia**
+### 3.2 · Cero doble digitación — 🟡 PARCIAL
+
+> `tests/interfaz/test_sin_captura_clinica_por_personal.py` recorre los esquemas de `/api/insn/` y `/api/receptor/`. Tiene **dos mitades**: prohíbe una lista de nombres clínicos Y exige que todo campo esté en una lista blanca declarada — sin la segunda, bastaría inventar un nombre nuevo para colar uno.
+>
+> ⬜ **Falta la métrica de clics por paciente.** — **restricción de producto, no preferencia**
 
 Esto es lo que mata a los proyectos de salud digital y hay que blindarlo con código, no con buenas intenciones.
 
@@ -113,7 +172,7 @@ Lo único que hace el profesional es **confirmar, corregir o firmar** (VERDE / �
 
 Recordatorio: `dominio/` no importa nada externo. Solo librería estándar y `dataclasses`. `mypy --strict` limpio.
 
-### 4.1 · `EstadoCiclo` — reemplazar por 9 estados
+### 4.1 · `EstadoCiclo` — reemplazar por 9 estados — ✅ HECHO
 
 Archivo: `src/relevo/dominio/objetos_valor/estado_ciclo.py`
 
@@ -138,7 +197,7 @@ Notas de diseño obligatorias:
 
 Migra los estados antiguos con un mapa explícito `ESTADOS_LEGADO: dict[str, EstadoCiclo]` y un test que verifique que cada valor viejo persistido en SQLite tiene destino. **No borres datos existentes para simplificar la migración.**
 
-### 4.2 · `Responsable` — nuevo objeto de valor
+### 4.2 · `Responsable` — nuevo objeto de valor — ✅ HECHO
 
 Archivo: `src/relevo/dominio/objetos_valor/responsable.py`
 
@@ -159,7 +218,9 @@ def responsable_de(estado: EstadoCiclo) -> Responsable: ...
 
 Esta función es la respuesta a **"¿Quién tiene el turno ahora?"**. Usa ese nombre literal en la interfaz — es la mejor pieza de comunicación del proyecto.
 
-### 4.3 · Tabla de transiciones con responsable y plazo
+### 4.3 · Tabla de transiciones con responsable y plazo — ✅ HECHO
+
+> El grafo está en `estado_ciclo.py` y la tabla de responsable / plazo / fuente en `maquina_ciclo.py`. Ver la nota de decisiones de arriba.
 
 Archivo: `src/relevo/dominio/servicios/maquina_ciclo.py`
 
@@ -179,7 +240,7 @@ Cada plazo va comentado con su fuente (regla 7). Los que no tienen fuente van ma
 
 Transiciones permitidas: define un `dict[EstadoCiclo, frozenset[EstadoCiclo]]` explícito. Cualquier transición fuera de ese mapa levanta `TransicionInvalida`. Test obligatorio: recorrer el grafo y verificar que desde cada estado se puede alcanzar `PRIMERA_ATENCION_CONFIRMADA`.
 
-### 4.4 · Reingreso
+### 4.4 · Reingreso — ✅ HECHO
 
 Archivo: `src/relevo/dominio/objetos_valor/reingreso.py`
 
@@ -202,7 +263,7 @@ def acciones_permitidas(ciclo: Ciclo, hoy: date) -> frozenset[AccionCiclo]:
 
 Test bloqueante nuevo: `tests/dominio/test_reingreso_no_reabre_atencion.py` — construye un ciclo con paciente de 18 años y 1 día en `REINGRESO`, verifica que ninguna acción clínica del INSN está en el conjunto permitido.
 
-### 4.5 · Corte etario — la métrica estrella de fracaso
+### 4.5 · Corte etario — la métrica estrella de fracaso — ✅ HECHO
 
 Archivo: `src/relevo/dominio/servicios/corte_etario.py`
 
@@ -235,7 +296,9 @@ class MetricaCorteEtario:
     total_cohorte: int
 ```
 
-### 4.6 · Ruta de Aprendizaje "Entrénate"
+### 4.6 · Ruta de Aprendizaje "Entrénate" — ✅ HECHO
+
+> Lección 6 completa con sus 5 fuentes citadas; 6 esqueletos sellados. Contenido en `config/lecciones_entrenate.yaml`. Ningún `modulo` en el código.
 
 Archivos nuevos en `src/relevo/dominio/`:
 
@@ -316,7 +379,7 @@ Con esto el TRAQ deja de ser un número de reporte y pasa a ser el diagnóstico 
 
 No inventes contenido clínico sobre Hunter. Un esqueleto honesto es más fuerte ante un jurado clínico que siete módulos que nadie del equipo puede defender.
 
-### 4.7 · Conciliación de medicación
+### 4.7 · Conciliación de medicación — ✅ HECHO
 
 Archivos: `objetos_valor/origen_dato.py`, `entidades/conciliacion.py`, `servicios/conciliador.py`
 
@@ -341,7 +404,7 @@ Reglas con test propio cada una:
 - El sistema **nunca** decide cuál versión es la correcta. Solo reporta la discrepancia.
 - Test bloqueante: `tests/dominio/test_conciliacion_no_modifica_pasaporte.py`.
 
-### 4.8 · Consentimiento del apoderado
+### 4.8 · Consentimiento del apoderado — ✅ HECHO
 
 Archivo: `entidades/acceso_apoderado.py`
 
@@ -351,7 +414,9 @@ Test bloqueante: `tests/dominio/test_acceso_apoderado_caduca_a_los_18.py`.
 
 Esto convierte una pantalla en un mecanismo, y es lo que un jurado de salud reconoce como serio.
 
-### 4.9 · Blindaje discursivo del IUT
+### 4.9 · Blindaje discursivo del IUT — 🟡 PARCIAL
+
+> El texto está en la API (`principal.py`), en el radar y en el componente del semáforo. ⬜ **Falta ponerlo como docstring de `calculadora_iut.py` y reproducirlo en el dossier.** Los betas y la fórmula sin tocar: los 5 casos a mano siguen coincidiendo.
 
 El documento de las compañeras dice "la IA nunca determina urgencia ni decide prioridad clínica". Eso choca con el IUT solo en la redacción, pero un jurado puede usarlo para partirnos. Cierra el pendiente #7 de la rúbrica escribiendo esto como docstring de `calculadora_iut.py` y reproduciéndolo en el dossier:
 
@@ -361,7 +426,9 @@ No toques los betas ni la fórmula. Los 5 casos hechos a mano deben seguir coinc
 
 ---
 
-## 5. Cambios en `aplicacion/`
+## 5. Cambios en `aplicacion/` — ✅ HECHO
+
+> Los 7 casos de uso, uno por archivo. `tests/aplicacion/` tiene tests reales.
 
 Casos de uso nuevos, uno por archivo, cada uno importando solo `dominio`:
 
@@ -391,7 +458,9 @@ Crea `tests/aplicacion/` con tests reales — hoy solo tiene `__init__.py`.
 
 ## 6. Cambios en `infraestructura/` — incluye la deuda pendiente
 
-### 6.1 · Persistencia (cierra T3 y T4)
+### 6.1 · Persistencia (cierra T3 y T4) — ✅ HECHO
+
+> Ida y vuelta con 50 semillas, y un test que comprueba que la muestra contenga de verdad los casos difíciles (TRAQ ausente, listas vacías, dosis sin verificar). Esquema v2 con migración idempotente.
 
 - Escribe los mappers `paciente_a_documento` / `paciente_desde_documento` y equivalentes para `Ciclo`, `ProgresoAprendizaje`, `CasoDeConciliacion`, `AccesoApoderado`.
 - Conecta SQLite en `interfaz/arranque.py`. Hoy `app.py` importa **cero** módulos de infraestructura: eso significa que nada de lo construido está realmente enchufado.
@@ -399,13 +468,17 @@ Crea `tests/aplicacion/` con tests reales — hoy solo tiene `__init__.py`.
 - Test de ida y vuelta con 50 semillas: guardar, leer, comparar por igualdad estructural.
 - Migración de esquema: sube `esquema_version` y escribe la migración de los estados legado de §4.1.
 
-### 6.2 · Auditoría (cierra T5)
+### 6.2 · Auditoría (cierra T5) — 🟡 PARCIAL
+
+> Conectada a transición de ciclo, avance de aprendizaje, resolución de conciliación y consentimiento del apoderado. Hay test de que editar una fila por SQL rompe la cadena. ⬜ **Falta el enganche en la pantalla de digitalización**: corrección humana y sello impreso en el acta.
 
 Conecta `RegistroAuditoria` a cada acción que cambie estado clínico o de acceso. Mínimo: transición de ciclo, verificación de campo digitalizado, resolución de conciliación, otorgamiento y revocación de consentimiento del apoderado.
 
 La cadena de hash ya funciona y está probada (editar una fila por SQL devolvió `(False, 1)`). Falta que alguien la llame.
 
-### 6.3 · WhatsApp: una sola ruta (cierra T6)
+### 6.3 · WhatsApp: una sola ruta (cierra T6) — 🟡 PARCIAL
+
+> Ruta única hecha: plantillas con su bandera de privacidad, `preparar_para_familia` como único camino, y sin enlace no se pinta botón. ⬜ **Falta `test_privacidad_whatsapp.py`** y el test de arquitectura que vigila la cadena fuera del adaptador.
 
 `app.py:890` construye `https://wa.me/51{telefono}?text={quote(cuerpo)}` **en línea**, saltándose el guardián de privacidad de `CanalWhatsAppEnlace`. Hay dos implementaciones paralelas y `test_privacidad_whatsapp` está certificando la que no se usa.
 
@@ -413,7 +486,9 @@ Borra la construcción en línea. Todo WhatsApp pasa por `CanalWhatsAppEnlace`. 
 
 El comportamiento visible no cambia: sigue abriendo la conversación con el texto preescrito, listo para enviar.
 
-### 6.4 · PDF del acta (cierra T2, tercer intento)
+### 6.4 · PDF del acta (cierra T2, tercer intento) — ✅ HECHO
+
+> Eran los dos fallos a la vez, y por eso los dos intentos anteriores no bastaron. El test mide el alto que pide el `Paragraph` en el ancho de su columna, así que comprueba el ajuste de verdad y no solo que no lance excepción.
 
 En `acta_digitalizacion.py`:
 
@@ -422,11 +497,15 @@ En `acta_digitalizacion.py`:
 - Aplica `xml.sax.saxutils.escape()` a todo texto que entre a un `Paragraph`, o un `&` en el nombre de un establecimiento rompe el render.
 - Prueba con el caso que falló: `Establecimiento` largo, y `Hospital Regional de Ucayali`.
 
-### 6.5 · Destinos en el radar (cierra T7)
+### 6.5 · Destinos en el radar (cierra T7) — ✅ HECHO
+
+> `GET /api/metricas/cobertura-destinos` devuelve **42 de 42 sin destino identificado (100 %)**, y el radar lo pinta arriba con su explicación.
 
 Conecta `DirectorioDestinos` al radar. Con el directorio vacío ya devuelve *"10 de 10 sin destino identificado (100 %)"*, y **esa cifra es el entregable de B1**. No la escondas: es la evidencia de brecha de oferta que el INSN puede llevar a una mesa de gestión. El sistema no inventa destinos; mide su ausencia.
 
-### 6.6 · Datos de demostración — caso Hunter
+### 6.6 · Datos de demostración — caso Hunter — ✅ HECHO
+
+> Mateo, 17 a 4 m, E76.1. Dosis de idursulfasa **como hueco**, no inventada. Caso de contraste con asma. Establecimientos verificados contra RENIPRESS.
 
 Todo sintético (regla 1). En `config/semilla_demo.yaml`:
 
@@ -446,11 +525,15 @@ Verifica que todos los establecimientos citados existan en el catálogo oficial.
 
 ## 7. `interfaz/` — API nueva y frontend nuevo
 
-### 7.1 · Por qué API
+### 7.1 · Por qué API — ✅ HECHO Y VERIFICADO
+
+> `git diff --stat C3..C4 -- src/relevo/dominio src/relevo/aplicacion` **sale vacío**. Cero líneas.
 
 Añadir `interfaz/api/` sin tocar una línea de `dominio/` ni `aplicacion/` **es** la demostración en vivo de la promesa del pitch: *"el núcleo no cambia, solo se cambia el adaptador de entrada"*. Deja constancia en el commit: el diff debe mostrar cero cambios en el núcleo entre el checkpoint C3 y el C4.
 
-### 7.2 · FastAPI
+### 7.2 · FastAPI — ✅ HECHO
+
+> 24 endpoints: todos los de la lista, más `/api/insn/*` y `/api/apoderado/*`.
 
 `src/relevo/interfaz/api/` — un router por área, ninguno con lógica de negocio. Los handlers solo traducen HTTP ↔ casos de uso. Pydantic v2 en la frontera (regla de calidad existente).
 
@@ -478,7 +561,9 @@ Tests de contrato: cada endpoint con al menos un caso feliz y uno de error, y ve
 
 FastAPI sirve también los estáticos, para que el despliegue sea un solo proceso.
 
-### 7.3 · Frontend desde cero, con arquitectura
+### 7.3 · Frontend desde cero, con arquitectura — ✅ HECHO
+
+> 17 módulos, el mayor de 165 líneas. Los tres tests duros pasan.
 
 `src/relevo/interfaz/web/` — sin framework, sin paso de compilación, pero **con capas**.
 
@@ -505,7 +590,9 @@ web/
 
 Motivo escrito en el código: la Ley 29733 clasifica los datos de salud como datos sensibles. Guardarlos en el navegador, sin cifrado, sin control de acceso y sin registro de quién los tocó, no es una implementación incompleta — es una que no se puede desplegar.
 
-### 7.4 · Las 7 vistas
+### 7.4 · Las 7 vistas — ✅ HECHO
+
+> Las siete más `#/paciente/leccion/:numero`. La del apoderado es la vista 2 con permisos recortados, no una octava.
 
 | # | Ruta | Contenido |
 |---|---|---|
@@ -521,7 +608,9 @@ Vista del apoderado: **no** es una octava vista. Es la vista 2 con permisos reco
 
 Componente fijo en todas: **Barra de Control Demo** — cambiar rol, avanzar etapa, reiniciar. Consume `/api/demo/*`, que por debajo es lo que `sembrar.py` ya hace por CLI.
 
-### 7.5 · Streamlit se queda como consola técnica — no es el producto
+### 7.5 · Streamlit se queda como consola técnica — 🟡 PARCIAL
+
+> `app.py` **no se borró** y ya no construye el enlace de WhatsApp a mano. ⬜ **Falta quitarle lo que la interfaz nueva cubre** y escribir la tabla de "qué es cada cosa" en el README.
 
 **No borres `app.py`.** Reenfócalo a lo que ya hace bien y no se va a reimplementar: digitalización con verificador, generación y evaluación de corpus, métricas del extractor, inspección de la cadena de auditoría.
 
@@ -541,7 +630,9 @@ Quítale a `app.py` todo lo que la interfaz nueva cubre, y quítale la construcc
 
 ## 8. Postura de seguridad y comunicación con el modelo
 
-### 8.1 · Cómo se enuncia el modelo de despliegue
+### 8.1 · Cómo se enuncia el modelo de despliegue — 🟡 PARCIAL
+
+> "On-premise, dentro de la red del hospital" ya está en la API y en el pie del frontend. ⬜ **Falta la tabla de brechas declaradas en el README.**
 
 La palabra correcta **no es "local en una laptop"** sino **on-premise: dentro de la red del hospital**. La laptop es la maqueta de ese modelo, no el modelo. En producción es un servidor institucional del INSN. Corrige esto en todo texto que digas lo contrario.
 
@@ -560,7 +651,9 @@ Lo que on-premise nos da frente a los grupos que usan API de OpenAI o Google: el
 
 En C6, escribe esta tabla en el `README`. **Declarar una brecha conocida da seriedad; que la encuentre el jurado, no.**
 
-### 8.3 · Roles y autenticación
+### 8.3 · Roles y autenticación — 🟡 PARCIAL
+
+> Los 5 roles existen y están aislados: `test_aislamiento_por_rol.py` pasa, el receptor recibe **404 y no 403**, y el ADMINISTRADOR no tiene lectura clínica. ⬜ **Falta la autenticación entera**: argon2id + cookie de sesión de servidor. Hoy el rol viaja en cabecera y el servidor le cree al cliente — declarado en pantalla, no fingido.
 
 **Cinco roles: cuatro de negocio y uno técnico.**
 
@@ -599,7 +692,7 @@ La frase que resume la postura y que debe aparecer en el dossier:
 
 > Nuestro modelo puede equivocarse; nuestro sistema no puede equivocarse en silencio.
 
-### 8.2 · Comunicación con el modelo
+### 8.2 · Comunicación con el modelo — ⬜ PENDIENTE (es documentación)
 
 En el dossier y en la documentación de software, describe esto correctamente porque va a ser objeto de pregunta:
 
@@ -611,7 +704,9 @@ Y el modelo nunca decide: extrae. Toda extracción pasa por el verificador anti-
 
 ---
 
-## 9. Tests bloqueantes — la tabla actualizada
+## 9. Tests bloqueantes — 🟡 PARCIAL
+
+> Escritos y en verde: aprendizaje-no-bloquea, reingreso-no-reabre, conciliación-no-modifica, apoderado-caduca, sin-almacenamiento, tamaño-JS, sin-captura-clínica, aislamiento-por-rol. ⬜ **Faltan `test_privacidad_whatsapp.py` y `test_fhir.py`**, y actualizar la tabla de `CLAUDE.md`.
 
 Los 4 existentes de `CLAUDE.md` siguen. Se agregan 6:
 
@@ -653,7 +748,9 @@ Si el tiempo se acaba, **C0–C5 es un sistema presentable y coherente**. C6 es 
 
 ---
 
-## 11. Pendientes de rúbrica que quedan cubiertos y los que no
+## 11. Pendientes de rúbrica — 🟡
+
+> Cubiertos: **1, 2, 4, 6**. Parcial: **7**. ⬜ Pendientes: **3** (checklist de seis ítems) y **5** (sección psicosocial del Pasaporte).
 
 De `MAPEO_RUBRICA_INSN.md`:
 
@@ -706,6 +803,6 @@ Todos los datos son sintéticos, así que exponerlo temporalmente no viola la re
 
 ---
 
-## 14. Al terminar, deja un informe
+## 14. Al terminar, deja un informe — ⬜ PENDIENTE
 
 Escribe `docs/INFORME_FUSION.md` con: qué checkpoints cerraste, qué tests nuevos hay y qué cubren, qué quedó pendiente y por qué, y qué `# TODO: confirmar con mentor` nuevos aparecieron. Ese archivo es el insumo directo de la documentación de software que viene después.
