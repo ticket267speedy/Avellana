@@ -1,0 +1,494 @@
+/* Lo especifico de cada vista. */
+
+/* ── 1 · Entrar ──────────────────────────────────────────────────────────── */
+
+.entrar-intro {
+  max-width: 60ch;
+  color: var(--tinta-suave);
+}
+
+.rejilla-roles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: 0.9rem;
+  margin: 1.2rem 0;
+}
+
+.tarjeta-rol {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  text-align: left;
+  padding: 1rem;
+  background: var(--papel-tarjeta);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  cursor: pointer;
+  font: inherit;
+}
+
+.tarjeta-rol:hover {
+  border-color: var(--acento);
+}
+
+.rol-icono {
+  font-size: 1.6rem;
+}
+
+.rol-nombre {
+  font-weight: 700;
+}
+
+.rol-descripcion {
+  font-size: 0.85rem;
+  color: var(--tinta-suave);
+}
+
+.aviso-sin-auth {
+  padding: 0.7rem 0.9rem;
+  background: var(--ambar-suave);
+  border-radius: var(--radio);
+  font-size: 0.85rem;
+  max-width: 65ch;
+}
+
+/* ── 2 y 3 · Paciente ────────────────────────────────────────────────────── */
+
+.estado-llano {
+  font-size: 1.3rem;
+  font-weight: 600;
+  margin-bottom: 0.6rem;
+}
+
+.que-hacer,
+.ruta-intro {
+  max-width: 62ch;
+}
+
+.cita-destacada {
+  padding: 0.5rem 0.7rem;
+  background: var(--acento-suave);
+  border-radius: 6px;
+}
+
+.tareas {
+  padding-left: 1.1rem;
+}
+
+.destino-nombre {
+  font-weight: 600;
+}
+
+.aviso-caducidad {
+  padding: 0.8rem 1rem;
+  background: var(--ambar-suave);
+  border-left: 4px solid var(--ambar);
+  border-radius: var(--radio);
+  margin-bottom: 1rem;
+}
+
+.bloqueado {
+  border-left: 4px solid var(--rojo);
+}
+
+/* ── 4 · Entrenate ───────────────────────────────────────────────────────── */
+
+.franja {
+  font-weight: 600;
+  color: var(--acento);
+}
+
+.motivo-recomendacion {
+  font-size: 0.95rem;
+}
+
+.progreso-resumen {
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+
+/* La invariante, visible para el propio adolescente. Que lo lea el es parte
+ * del punto: aprender es para el, no un requisito para que le deriven. */
+.invariante {
+  font-size: 0.85rem;
+  color: var(--tinta-suave);
+  border-left: 3px solid var(--acento);
+  padding-left: 0.7rem;
+  max-width: 62ch;
+}
+
+.rejilla-habilidades {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 0.8rem;
+}
+
+.habilidad {
+  background: var(--papel-tarjeta);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  padding: 0.9rem;
+}
+
+.habilidad h2 {
+  font-size: 1rem;
+}
+
+.habilidad-numero {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--tinta-suave);
+  margin: 0;
+}
+
+.habilidad-estado {
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.hab-lograda {
+  border-left: 4px solid var(--verde);
+}
+
+.hab-practica {
+  border-left: 4px solid var(--acento);
+}
+
+.hab-refuerzo {
+  border-left: 4px solid var(--ambar);
+}
+
+.sello {
+  display: block;
+  font-size: 0.73rem;
+  color: var(--ambar);
+  background: var(--ambar-suave);
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+  margin: 0.4rem 0;
+}
+
+.sello-ok {
+  color: var(--verde);
+  background: var(--verde-suave);
+}
+
+/* ── Leccion ─────────────────────────────────────────────────────────────── */
+
+.leccion {
+  max-width: 68ch;
+}
+
+.objetivo {
+  padding: 0.6rem 0.8rem;
+  background: var(--acento-suave);
+  border-radius: var(--radio);
+}
+
+.esqueleto {
+  border-left: 4px solid var(--ambar);
+}
+
+.sello-grande {
+  font-weight: 700;
+  color: var(--ambar);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  font-size: 0.85rem;
+}
+
+.paso {
+  margin-bottom: 1.4rem;
+}
+
+.paso-contenido blockquote {
+  margin: 0.6rem 0;
+  padding: 0.5rem 0.9rem;
+  border-left: 3px solid var(--acento);
+  background: var(--papel-tarjeta);
+  font-style: italic;
+}
+
+.fuentes ul {
+  list-style: none;
+  padding: 0;
+}
+
+.fuentes li {
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--borde);
+}
+
+.fuente-afirmacion {
+  font-weight: 600;
+  margin: 0;
+}
+
+.fuente-norma {
+  margin: 0.1rem 0;
+  color: var(--acento);
+  font-size: 0.85rem;
+}
+
+.fuente-detalle {
+  margin: 0;
+  font-size: 0.83rem;
+  color: var(--tinta-suave);
+}
+
+/* ── 5 · Pasaporte ───────────────────────────────────────────────────────── */
+
+.pasaporte-meta {
+  color: var(--tinta-suave);
+  font-size: 0.88rem;
+}
+
+.declarar {
+  margin-top: 0.8rem;
+  font-size: 0.9rem;
+}
+
+.declarar form {
+  display: grid;
+  gap: 0.5rem;
+  max-width: 26rem;
+  margin: 0.6rem 0;
+}
+
+.declarar label {
+  display: grid;
+  gap: 0.2rem;
+  font-size: 0.85rem;
+}
+
+.declarar input {
+  padding: 0.4rem 0.5rem;
+  border: 1px solid var(--borde);
+  border-radius: 5px;
+  font: inherit;
+}
+
+.aviso-normativo {
+  font-size: 0.78rem;
+  color: var(--tinta-suave);
+  border-top: 1px solid var(--borde);
+  padding-top: 0.7rem;
+}
+
+/* ── 6 · Radar ───────────────────────────────────────────────────────────── */
+
+.corte-etario {
+  background: var(--papel-tarjeta);
+  border: 1px solid var(--borde);
+  border-top: 4px solid var(--rojo);
+  border-radius: var(--radio);
+  padding: 1.1rem 1.2rem;
+  margin-bottom: 1rem;
+}
+
+.corte-cifras {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2rem;
+  margin: 0.8rem 0;
+}
+
+.cifra {
+  display: flex;
+  flex-direction: column;
+  max-width: 16rem;
+}
+
+.cifra .numero {
+  font-size: 2.6rem;
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.cifra-riesgo .numero {
+  color: var(--ambar);
+}
+
+.cifra-dano .numero {
+  color: var(--rojo);
+}
+
+.cifra .etiqueta {
+  font-size: 0.83rem;
+  color: var(--tinta-suave);
+}
+
+.corte-aclaracion,
+.corte-incompletos {
+  font-size: 0.85rem;
+  max-width: 66ch;
+}
+
+.corte-incompletos {
+  color: var(--ambar);
+}
+
+.destinos-cifra {
+  font-size: 1.2rem;
+}
+
+.destinos-nota,
+.destinos-directorio {
+  font-size: 0.85rem;
+  color: var(--tinta-suave);
+  max-width: 66ch;
+}
+
+.filtros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 1rem 0 0.6rem;
+}
+
+.filtro {
+  padding: 0.3rem 0.7rem;
+  border: 1px solid var(--borde);
+  background: var(--papel-tarjeta);
+  border-radius: 999px;
+  font: inherit;
+  font-size: 0.83rem;
+  cursor: pointer;
+}
+
+.filtro.activo {
+  background: var(--acento);
+  color: #fff;
+  border-color: var(--acento);
+}
+
+.tabla-radar {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--papel-tarjeta);
+  font-size: 0.88rem;
+}
+
+.tabla-radar th,
+.tabla-radar td {
+  text-align: left;
+  padding: 0.5rem 0.6rem;
+  border-bottom: 1px solid var(--borde);
+  vertical-align: top;
+}
+
+.tabla-radar tbody tr {
+  cursor: pointer;
+}
+
+.tabla-radar tbody tr:hover {
+  background: var(--acento-suave);
+}
+
+.fila-urgente .celda-id {
+  border-left: 3px solid var(--rojo);
+}
+
+.celda-id small {
+  color: var(--tinta-suave);
+}
+
+.corte-cerca {
+  color: var(--ambar);
+  font-weight: 700;
+}
+
+.corte-pasado {
+  color: var(--rojo);
+  font-weight: 700;
+}
+
+.nota-iut {
+  font-size: 0.83rem;
+  color: var(--tinta-suave);
+  max-width: 70ch;
+  margin-top: 0.9rem;
+}
+
+/* ── 7 · Bandeja del receptor ────────────────────────────────────────────── */
+
+.bandeja-intro {
+  max-width: 64ch;
+  color: var(--tinta-suave);
+  font-size: 0.9rem;
+}
+
+.referencia {
+  background: var(--papel-tarjeta);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  padding: 0.9rem 1rem;
+  margin-bottom: 0.8rem;
+}
+
+.referencia.vencida {
+  border-left: 4px solid var(--rojo);
+}
+
+.referencia header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+  align-items: baseline;
+}
+
+.referencia-id {
+  font-weight: 700;
+}
+
+.referencia-dx {
+  margin: 0.3rem 0;
+}
+
+.referencia-estado {
+  font-size: 0.85rem;
+  color: var(--tinta-suave);
+}
+
+.acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin-top: 0.6rem;
+}
+
+.solicitar {
+  flex-basis: 100%;
+  font-size: 0.87rem;
+  padding: 0.5rem 0.7rem;
+  background: var(--ambar-suave);
+  border-radius: var(--radio);
+}
+
+.solicitar label {
+  display: block;
+  margin: 0.2rem 0;
+}
+
+.solicitar-nota {
+  font-size: 0.83rem;
+}
+
+.respuesta {
+  margin: 0.5rem 0 0;
+  font-size: 0.87rem;
+  color: var(--acento);
+}
+
+.respuesta.logro {
+  color: var(--verde);
+  font-weight: 700;
+}
+
+.vacio {
+  color: var(--tinta-suave);
+  max-width: 60ch;
+}

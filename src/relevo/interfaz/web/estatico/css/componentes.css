@@ -1,0 +1,343 @@
+/* Los componentes reutilizables: turno, semaforo, insignias, linea de tiempo,
+ * barra de demo. */
+
+/* ── ¿Quien tiene el turno ahora? ────────────────────────────────────────── */
+
+.turno {
+  background: var(--acento-suave);
+  border-radius: var(--radio);
+  padding: 0.7rem 0.9rem;
+  margin: 0.6rem 0;
+}
+
+.turno-cerrado {
+  background: var(--verde-suave);
+}
+
+.turno-pregunta {
+  margin: 0;
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--tinta-suave);
+}
+
+.turno-respuesta {
+  margin: 0.15rem 0 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.turno-que-hacer {
+  margin: 0.4rem 0 0;
+  font-size: 0.9rem;
+}
+
+.turno-breve {
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+/* ── Semaforo del IUT ────────────────────────────────────────────────────── */
+
+/* El color NUNCA va solo: siempre lleva texto y un punto. Un tablero clinico
+ * que solo dice rojo/verde es inaccesible, y ademas se imprime en blanco y
+ * negro mas a menudo de lo que nadie admite. */
+.semaforo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.semaforo .punto {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.semaforo-rojo {
+  background: var(--rojo-suave);
+  color: var(--rojo);
+}
+
+.semaforo-ambar {
+  background: var(--ambar-suave);
+  color: var(--ambar);
+}
+
+.semaforo-verde {
+  background: var(--verde-suave);
+  color: var(--verde);
+}
+
+.semaforo .valor {
+  font-variant-numeric: tabular-nums;
+  opacity: 0.8;
+}
+
+.marca-dudosa,
+.imputado {
+  font-size: 0.72rem;
+  color: var(--ambar);
+  margin-left: 0.3rem;
+}
+
+/* ── Desglose del indice ─────────────────────────────────────────────────── */
+
+.desglose {
+  margin-top: 0.7rem;
+  font-size: 0.86rem;
+}
+
+.desglose-nota,
+.desglose-pie {
+  color: var(--tinta-suave);
+  font-size: 0.82rem;
+}
+
+.aportes {
+  list-style: none;
+  margin: 0.5rem 0;
+  padding: 0;
+}
+
+.aporte {
+  display: grid;
+  grid-template-columns: 12rem 1fr 3rem 3.5rem;
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0.15rem 0;
+}
+
+.aporte-barra {
+  background: var(--borde);
+  border-radius: 3px;
+  height: 0.5rem;
+  overflow: hidden;
+}
+
+.aporte-barra i {
+  display: block;
+  height: 100%;
+  background: var(--acento);
+}
+
+.aporte-cifra,
+.aporte-beta {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: var(--tinta-suave);
+}
+
+/* ── Insignias de origen del dato ────────────────────────────────────────── */
+
+.badge-origen {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 600;
+}
+
+.origen-verde {
+  background: var(--verde-suave);
+  color: var(--verde);
+}
+
+.origen-ambar {
+  background: var(--ambar-suave);
+  color: var(--ambar);
+}
+
+.origen-rojo {
+  background: var(--rojo-suave);
+  color: var(--rojo);
+}
+
+.lista-medicacion {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.linea-medicacion {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: baseline;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid var(--borde);
+}
+
+.medicamento-nombre {
+  font-weight: 600;
+  min-width: 12rem;
+}
+
+/* El hueco de una dosis no verificada. Visible a proposito: un hueco obliga al
+ * medico a llenarlo, una dosis inventada no obliga a nada. */
+.hueco {
+  font-family: ui-monospace, monospace;
+  color: var(--ambar);
+}
+
+.discrepancias {
+  margin-top: 0.8rem;
+  padding: 0.6rem 0.8rem;
+  background: var(--ambar-suave);
+  border-radius: var(--radio);
+}
+
+.discrepancias ul {
+  margin: 0.4rem 0 0;
+  padding-left: 1.1rem;
+}
+
+.discrepancia-tipo {
+  font-weight: 700;
+}
+
+.sin-discrepancias {
+  color: var(--verde);
+  font-size: 0.88rem;
+}
+
+/* ── Linea de tiempo ─────────────────────────────────────────────────────── */
+
+.linea-tiempo {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0.5rem 0;
+  padding: 0;
+  counter-reset: etapa;
+}
+
+.etapa {
+  flex: 1 1 8rem;
+  padding: 0.5rem 0.6rem;
+  border-radius: 8px;
+  background: var(--papel);
+  border: 1px solid var(--borde);
+  font-size: 0.82rem;
+  color: var(--tinta-suave);
+}
+
+.etapa-alcanzada {
+  background: var(--acento-suave);
+  color: var(--tinta);
+  border-color: var(--acento);
+}
+
+.etapa-actual {
+  border-width: 2px;
+  font-weight: 700;
+}
+
+.etapa-marca {
+  margin-right: 0.3rem;
+}
+
+.fuera-de-linea {
+  padding: 0.6rem 0.8rem;
+  border-radius: var(--radio);
+  font-size: 0.88rem;
+}
+
+.fuera-de-linea.alerta {
+  background: var(--rojo-suave);
+  color: var(--rojo);
+}
+
+.fuera-de-linea.aviso {
+  background: var(--ambar-suave);
+  color: var(--ambar);
+}
+
+.plazo {
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.plazo-bien {
+  color: var(--verde);
+}
+
+.plazo-aviso {
+  color: var(--ambar);
+}
+
+.plazo-mal {
+  color: var(--rojo);
+}
+
+.historial ol {
+  font-size: 0.85rem;
+  padding-left: 1.1rem;
+}
+
+.historial-fecha {
+  font-variant-numeric: tabular-nums;
+  color: var(--tinta-suave);
+  margin-right: 0.4rem;
+}
+
+.historial-nota,
+.historial-quien {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--tinta-suave);
+}
+
+/* ── Barra de demo ───────────────────────────────────────────────────────── */
+
+.barra-demo {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+  font-size: 0.82rem;
+}
+
+.demo-etiqueta {
+  background: var(--ambar);
+  color: #fff;
+  padding: 0.1rem 0.45rem;
+  border-radius: 4px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.barra-demo select,
+.barra-demo input,
+.barra-demo button {
+  font: inherit;
+  font-size: 0.82rem;
+  padding: 0.25rem 0.45rem;
+  border-radius: 5px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.barra-demo option {
+  color: var(--tinta);
+}
+
+.barra-demo button {
+  cursor: pointer;
+}
+
+.demo-conteo {
+  opacity: 0.8;
+  font-variant-numeric: tabular-nums;
+}

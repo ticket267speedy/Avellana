@@ -1,0 +1,195 @@
+/* Variables, tipografia y reset.
+ *
+ * Sin framework de estilos: 900 lineas de CSS propio pesan menos que una
+ * dependencia y no hay que aprenderse las clases de nadie. Tres archivos, con
+ * la misma separacion que el JS: base, componentes, vistas.
+ *
+ * La paleta esta pensada para leerse tambien impresa en blanco y negro: el
+ * semaforo no depende SOLO del color —lleva texto y un punto de forma
+ * distinta— porque el 8 % de los hombres tiene alguna deficiencia de vision
+ * del color, y un tablero clinico que solo dice rojo/verde es inaccesible.
+ */
+
+:root {
+  --tinta: #17212b;
+  --tinta-suave: #4a5a6b;
+  --papel: #f7f9fb;
+  --papel-tarjeta: #ffffff;
+  --borde: #d8e0e8;
+
+  --acento: #0b6b73;
+  --acento-suave: #e0f0f1;
+
+  --rojo: #b3261e;
+  --rojo-suave: #fbeae9;
+  --ambar: #8a5a00;
+  --ambar-suave: #fdf3e0;
+  --verde: #1e6b3a;
+  --verde-suave: #e6f4ea;
+
+  --radio: 10px;
+  --sombra: 0 1px 3px rgba(23, 33, 43, 0.08);
+  --ancho: 1100px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 16px;
+  line-height: 1.55;
+  color: var(--tinta);
+  background: var(--papel);
+}
+
+h1 {
+  font-size: 1.6rem;
+  margin: 0 0 0.6rem;
+}
+
+h2 {
+  font-size: 1.15rem;
+  margin: 0 0 0.5rem;
+}
+
+p {
+  margin: 0 0 0.7rem;
+}
+
+a {
+  color: var(--acento);
+}
+
+/* ── Estructura ──────────────────────────────────────────────────────────── */
+
+.cabecera {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.7rem 1.2rem;
+  background: var(--tinta);
+  color: #fff;
+}
+
+.marca-nombre {
+  font-weight: 700;
+  font-size: 1.15rem;
+  margin-right: 0.6rem;
+}
+
+.marca-lema {
+  font-size: 0.82rem;
+  opacity: 0.75;
+}
+
+.aviso-demo {
+  margin: 0;
+  padding: 0.4rem 1.2rem;
+  background: var(--ambar-suave);
+  color: var(--ambar);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-align: center;
+}
+
+.contenido {
+  max-width: var(--ancho);
+  margin: 0 auto;
+  padding: 1.5rem 1.2rem 3rem;
+}
+
+.pie {
+  max-width: var(--ancho);
+  margin: 0 auto;
+  padding: 1.5rem 1.2rem 2.5rem;
+  border-top: 1px solid var(--borde);
+  font-size: 0.78rem;
+  color: var(--tinta-suave);
+}
+
+.pie-tecnico {
+  margin-top: 0.5rem;
+}
+
+/* ── Piezas comunes ──────────────────────────────────────────────────────── */
+
+.tarjeta {
+  background: var(--papel-tarjeta);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  padding: 1rem 1.1rem;
+  margin-bottom: 1rem;
+  box-shadow: var(--sombra);
+}
+
+.tarjeta.destacada {
+  border-left: 4px solid var(--acento);
+}
+
+.tarjeta.alerta {
+  border-left: 4px solid var(--rojo);
+  background: var(--rojo-suave);
+}
+
+.tarjeta.error {
+  border-left: 4px solid var(--rojo);
+}
+
+.boton,
+.boton-secundario,
+.boton-accion {
+  display: inline-block;
+  padding: 0.5rem 0.95rem;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.boton {
+  background: var(--acento);
+  color: #fff;
+}
+
+.boton-secundario,
+.boton-accion {
+  background: #fff;
+  color: var(--acento);
+  border-color: var(--acento);
+}
+
+.boton:disabled,
+.boton-accion:disabled {
+  opacity: 0.55;
+  cursor: progress;
+}
+
+.cargando {
+  color: var(--tinta-suave);
+}
+
+.lista-simple {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+.norma {
+  font-size: 0.8rem;
+  color: var(--tinta-suave);
+}
+
+@media print {
+  .cabecera,
+  .barra-demo,
+  .boton {
+    display: none;
+  }
+}

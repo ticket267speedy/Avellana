@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Relevo — Puente 18+</title>
+  <link rel="stylesheet" href="/estatico/css/base.css">
+  <link rel="stylesheet" href="/estatico/css/componentes.css">
+  <link rel="stylesheet" href="/estatico/css/vistas.css">
+</head>
+<body>
+  <!--
+    UNICO HTML del producto. El enrutado es por hash (#/...), asi que recargar
+    #/insn/radar funciona sin ninguna regla de reescritura en el servidor y el
+    despliegue sigue siendo un solo proceso.
+
+    Sin framework y sin paso de compilacion, pero CON CAPAS: api.js es el unico
+    sitio con fetch(), estado.js guarda en memoria, y cada vista es un archivo
+    que exporta render(). Ningun .js pasa de 200 lineas, y hay un test que
+    falla si alguno lo hace — es la respuesta directa y verificable a lo que
+    salio mal en el otro MVP.
+  -->
+  <header class="cabecera">
+    <div class="marca">
+      <span class="marca-nombre">Relevo</span>
+      <span class="marca-lema">Puente 18+ · INSN San Borja</span>
+    </div>
+    <div id="barra-demo" class="barra-demo"></div>
+  </header>
+
+  <!--
+    Aviso permanente y no descartable. Un PDF o una pantalla con aspecto
+    clinico y sin marca puede terminar en manos de alguien que lo tome por
+    real.
+  -->
+  <p class="aviso-demo" role="status">
+    DATOS SINTETICOS — DEMO. Ninguna persona de esta pantalla existe.
+  </p>
+
+  <main id="app" class="contenido" aria-live="polite">
+    <p class="cargando">Cargando…</p>
+  </main>
+
+  <footer class="pie">
+    <p>
+      Documento informativo complementario para la transicion asistencial. No
+      reemplaza la historia clinica ni el resumen de historia clinica normado
+      (RM 214-2018-MINSA). Elaborado con apoyo automatizado, revisado y firmado
+      por el medico tratante.
+    </p>
+    <p class="pie-tecnico">
+      Despliegue <strong>on-premise</strong>: el dato no sale de la red del
+      hospital. Equipo Avellana.
+    </p>
+  </footer>
+
+  <script type="module" src="/estatico/js/app.js"></script>
+</body>
+</html>
