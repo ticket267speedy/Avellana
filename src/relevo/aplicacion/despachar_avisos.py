@@ -20,6 +20,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass, field
 
 from relevo.dominio.eventos import EventoDominio, PlazoPorVencer, PlazoVencido
+from relevo.dominio.objetos_valor.telefono import Telefono
 from relevo.dominio.puertos.notificacion import (
     CanalNotificacion,
     Mensaje,
@@ -47,8 +48,64 @@ class DespacharAvisos:
     — que es la forma mas rapida de que deje de leerlos.
     """
 
-    def __init__(self, canal_equipo: CanalNotificacion) -> None:
+    def __init__(
+        self,
+        canal_equipo: CanalNotificacion,
+        canal_familia: CanalNotificacion | None = None,
+    ) -> None:
         self._canal = canal_equipo
+        self._canal_familia = canal_familia
+
+    # ── La unica ruta legitima a un enlace de WhatsApp ──────────────────────
+
+    def preparar_para_familia(
+        self,
+        cuerpo: str,
+        asunto: str,
+        telefono: Telefono | None,
+        referencia_paciente: str,
+        contiene_datos_clinicos: bool = False,
+    ) -> ResultadoDespacho:
+        """Prepara un mensaje para la familia y devuelve el enlace.
+
+        ═══════════════════════════════════════════════════════════════════════
+        POR QUE ESTE METODO EXISTE
+        ═══════════════════════════════════════════════════════════════════════
+
+        La pantalla construia el enlace `wa.me` a mano, saltandose la guarda de
+        privacidad del adaptador. No habia fuga —las plantillas estaban
+        limpias— pero el test de privacidad iba a certificar un canal que nadie
+        usaba, y el canal vivo iba a seguir sin proteccion.
+
+        Ahora hay una sola ruta: la pantalla pide, la aplicacion arma el
+        `Mensaje` con su bandera, y el adaptador decide. Si el mensaje declara
+        datos clinicos, el adaptador lo rechaza y aqui vuelve
+        `despachado=False` — la pantalla muestra el error y NO ofrece el boton.
+
+        `contiene_datos_clinicos` se acepta como parametro a proposito, aunque
+        hoy todas las plantillas sean False: es lo que permite comprobar en un
+        test que la guarda funciona de verdad cuando alguien pone True.
+        """
+        if self._canal_familia is None:
+            return ResultadoDespacho(
+                despachado=False,
+                detalle=(
+                    "No hay canal de familia configurado. Se compone en "
+                    "interfaz/arranque.py, que es el unico sitio donde se "
+                    "nombran adaptadores."
+                ),
+            )
+
+        mensaje = Mensaje(
+            asunto=asunto,
+            cuerpo=cuerpo,
+            destinatario=referencia_paciente,
+            tipo_destinatario=TipoDestinatario.FAMILIA,
+            contiene_datos_clinicos=contiene_datos_clinicos,
+            telefono=telefono,
+            etiquetas=("familia", "whatsapp"),
+        )
+        return self._canal_familia.despachar(mensaje)
 
     def ejecutar(
         self, eventos: Sequence[EventoDominio], destinatario: str

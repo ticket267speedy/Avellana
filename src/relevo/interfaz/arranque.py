@@ -26,6 +26,7 @@ from relevo.aplicacion.acciones_receptor import AccionesReceptor
 from relevo.aplicacion.avanzar_aprendizaje import AvanzarAprendizaje
 from relevo.aplicacion.avanzar_ciclo import AvanzarCiclo
 from relevo.aplicacion.conciliar_medicacion import ConciliarMedicacion
+from relevo.aplicacion.despachar_avisos import DespacharAvisos
 from relevo.aplicacion.digitalizar_documento import (
     CampoDigitalizado,
     ConfirmarDigitalizacion,
@@ -43,7 +44,9 @@ from relevo.dominio.entidades.ciclo_transicion import CicloTransicion
 from relevo.dominio.entidades.destino import DirectorioDestinos
 from relevo.dominio.entidades.leccion import Leccion
 from relevo.dominio.entidades.progreso_aprendizaje import ProgresoAprendizaje
+from relevo.dominio.excepciones import ErrorDominio
 from relevo.dominio.objetos_valor.habilidad import Habilidad
+from relevo.dominio.objetos_valor.telefono import Telefono
 from relevo.dominio.servicios.calculadora_iut import CalculadoraIUT
 from relevo.dominio.servicios.clasificador_cohorte import ClasificadorCohorte
 from relevo.dominio.entidades.paciente import Paciente
@@ -64,6 +67,14 @@ from relevo.infraestructura.configuracion.cargador_yaml import (
     cargar_politica_plazos,
 )
 from relevo.infraestructura.fuentes.cohorte_demo import construir_cohorte_demo
+from relevo.infraestructura.notificacion.canal_archivo import (
+    CanalCorreoArchivo,
+    CanalWhatsAppEnlace,
+)
+from relevo.infraestructura.notificacion.plantillas_mensaje import (
+    TipoMensajeFamilia,
+    plantilla_de,
+)
 from relevo.infraestructura.persistencia.auditoria import RegistroAuditoria
 from relevo.infraestructura.persistencia.mapeadores import (
     acceso_a_documento,
@@ -182,6 +193,21 @@ def _generar_acta(
 
 
 @dataclass(frozen=True, slots=True)
+class MensajeParaFamilia:
+    """El mensaje compuesto mas el veredicto del adaptador.
+
+    Lleva el cuerpo Y el resultado juntos porque la pantalla necesita mostrar
+    el texto aunque el enlace se haya rechazado: ver que se iba a enviar es
+    parte de entender por que no se envio.
+    """
+
+    detalle_cuerpo: str
+    despachado: bool
+    detalle: str
+    enlace_generado: str
+
+
+@dataclass(frozen=True, slots=True)
 class Contenedor:
     """Los casos de uso ya construidos, listos para que la pantalla los use."""
 
@@ -218,6 +244,8 @@ class Contenedor:
 
     directorio_destinos: DirectorioDestinos
     lecciones: dict[Habilidad, Leccion]
+    despachar_avisos: DespacharAvisos
+    """El unico camino hacia un enlace de WhatsApp o un correo."""
 
     avanzar_ciclo: AvanzarCiclo
     acciones_receptor: AccionesReceptor
@@ -279,6 +307,56 @@ class Contenedor:
             calculadora=CalculadoraIUT(cargar_parametros_iut()),
             clasificador=ClasificadorCohorte(),
         ).ejecutar(hoy)
+
+    # ── WhatsApp: una sola ruta ──────────────────────────────────────────────
+
+    def motivos_de_mensaje(self) -> tuple[TipoMensajeFamilia, ...]:
+        """Los motivos de comunicacion que el sistema sabe preparar."""
+        return tuple(TipoMensajeFamilia)
+
+    def etiqueta_de_motivo(self, tipo: TipoMensajeFamilia) -> str:
+        return tipo.etiqueta
+
+    def telefono_valido(self, crudo: str) -> Telefono | None:
+        """Un `Telefono` o None. El prefijo lo pone el objeto de valor.
+
+        Devolver None y no lanzar: que el numero del sistema este mal es el
+        caso NORMAL, no el excepcional. La plantilla oficial de historia
+        clinica del INSN no tiene campo de telefono, asi que el numero que hay
+        lo anoto alguien cuando el paciente tenia tres anios.
+        """
+        try:
+            return Telefono(numero=crudo)
+        except ErrorDominio:
+            return None
+
+    def preparar_whatsapp_familia(
+        self,
+        tipo: TipoMensajeFamilia,
+        referencia_paciente: str,
+        telefono: Telefono | None,
+    ) -> MensajeParaFamilia:
+        """Compone el mensaje y pide el enlace al adaptador.
+
+        La pantalla NO construye el enlace. Pide, y la aplicacion decide: si el
+        mensaje declarara datos clinicos, el adaptador lo rechaza y la pantalla
+        se queda sin boton que ofrecer.
+        """
+        plantilla = plantilla_de(tipo)
+        cuerpo = plantilla.componer(referencia_paciente)
+        resultado = self.despachar_avisos.preparar_para_familia(
+            cuerpo=cuerpo,
+            asunto=plantilla.asunto,
+            telefono=telefono,
+            referencia_paciente=referencia_paciente,
+            contiene_datos_clinicos=plantilla.contiene_datos_clinicos,
+        )
+        return MensajeParaFamilia(
+            detalle_cuerpo=cuerpo,
+            despachado=resultado.despachado,
+            detalle=resultado.detalle,
+            enlace_generado=resultado.enlace_generado,
+        )
 
     def resumen_directorio(self) -> str:
         """Una linea honesta sobre el estado del directorio de destinos.
@@ -551,6 +629,12 @@ def construir(
         auditoria=auditoria,
         directorio_destinos=cargar_directorio(),
         lecciones=lecciones,
+        despachar_avisos=DespacharAvisos(
+            canal_equipo=CanalCorreoArchivo(),
+            # El canal de familia se compone AQUI y en ningun otro sitio: es lo
+            # que garantiza que todo WhatsApp pase por la guarda de privacidad.
+            canal_familia=CanalWhatsAppEnlace(),
+        ),
         avanzar_ciclo=AvanzarCiclo(maquina=maquina),
         acciones_receptor=AccionesReceptor.con_maquina(maquina),
         registrar_reingreso=RegistrarReingreso.con_maquina(maquina),

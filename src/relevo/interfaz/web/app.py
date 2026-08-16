@@ -16,7 +16,6 @@ import sys
 from collections.abc import Callable
 from datetime import date, datetime, timedelta
 from pathlib import Path
-from urllib.parse import quote
 
 # Asegurar que el paquete relevo se encuentre en el path
 _SRC_DIR = Path(__file__).resolve().parents[3]
@@ -928,13 +927,14 @@ with tab_whatsapp:
     with col_w1:
         st.markdown("##### Configuración del Mensaje")
 
+        # Los motivos y sus textos viven en
+        # `infraestructura/notificacion/plantillas_mensaje.py`, con su bandera
+        # de privacidad. Estaban escritos aqui, junto a un enlace de WhatsApp
+        # armado a mano que se saltaba la guarda del adaptador.
         tipo_mensaje = st.selectbox(
             "Seleccionar motivo de comunicación:",
-            options=[
-                "Actualización de teléfono de contacto",
-                "Citación a consulta de preparación de transición",
-                "Entrega de Pasaporte 18+ e inicio de referencia",
-            ],
+            options=list(contenedor.motivos_de_mensaje()),
+            format_func=lambda t: contenedor.etiqueta_de_motivo(t),
         )
 
         # ── DE DONDE SALE ESTE NUMERO ──────────────────────────────────
@@ -977,44 +977,61 @@ with tab_whatsapp:
         )
         st.caption(procedencia)
 
-        # Limpiar caracteres no numéricos
-        telefono_limpio = "".join(c for c in telefono_ingresado if c.isdigit())
-        if not telefono_limpio:
-            telefono_limpio = NUMERO_DE_PRUEBAS
-
-        if tipo_mensaje == "Actualización de teléfono de contacto":
-            cuerpo_mensaje = (
-                f"Estimada familia de {pac_wsp.id}, le saludamos del Instituto Nacional de Salud del Niño San Borja. "
-                f"Nos comunicamos para validar su número telefónico de contacto y asegurar la continuidad de su atención. "
-                f"Por favor, confírmenos si este sigue siendo su número principal. Muchas gracias."
+        # El prefijo internacional lo pone `Telefono.formato_internacional`, no
+        # una concatenacion de "51" a mano: el objeto de valor ya sabe validar
+        # y componer, y recomponerlo aqui era una segunda verdad esperando a
+        # divergir.
+        telefono_para_envio = contenedor.telefono_valido(telefono_ingresado)
+        if telefono_para_envio is None:
+            st.warning(
+                "El número no tiene forma de móvil peruano (9 dígitos, empieza "
+                "en 9). Corrígelo antes de generar el enlace."
             )
-        elif tipo_mensaje == "Citación a consulta de preparación de transición":
-            cuerpo_mensaje = (
-                f"Estimada familia de {pac_wsp.id}, le saludamos del INSN San Borja. "
-                f"Le recordamos su próxima consulta médica en el programa de preparación de transición a la atención adulta. "
-                f"Es muy importante su asistencia para planificar su derivación oportuna. Por favor confírmenos su recepción."
+
+        # ═══════════════════════════════════════════════════════════════
+        # UNA SOLA RUTA HACIA WHATSAPP
+        #
+        # Antes esta pantalla construia el enlace de WhatsApp a mano, con el
+        # prefijo 51 concatenado. Ese enlace NO pasaba por `CanalWhatsAppEnlace`, y por tanto no
+        # pasaba por la guarda de privacidad: el test de privacidad iba a
+        # certificar el adaptador, iba a pasar en verde, y el canal que la
+        # gente usaba de verdad iba a seguir sin proteccion.
+        #
+        # Ahora la pantalla pide y la aplicacion decide. Si el mensaje
+        # declarara datos clinicos, el adaptador lo rechaza y aqui NO se
+        # ofrece el boton.
+        # ═══════════════════════════════════════════════════════════════
+        resultado_wsp = contenedor.preparar_whatsapp_familia(
+            tipo=tipo_mensaje,
+            referencia_paciente=pac_wsp.id,
+            telefono=telefono_para_envio,
+        )
+
+        st.text_area(
+            "Contenido del mensaje a despachar:",
+            value=resultado_wsp.detalle_cuerpo,
+            height=130,
+            disabled=True,
+        )
+
+        if resultado_wsp.despachado and resultado_wsp.enlace_generado:
+            st.markdown(
+                f"""
+                <a href="{resultado_wsp.enlace_generado}" target="_blank" style="text-decoration:none;">
+                    <div style="background-color:#2e7d32;color:#ffffff;text-align:center;padding:10px 16px;border-radius:4px;font-weight:700;font-size:0.9rem;margin-top:10px;">
+                        Abrir chat de WhatsApp
+                    </div>
+                </a>
+                """,
+                unsafe_allow_html=True,
             )
         else:
-            cuerpo_mensaje = (
-                f"Estimada familia de {pac_wsp.id}, le saludamos del INSN San Borja. "
-                f"Su Pasaporte de Salud 18+ se encuentra listo para entrega en su próxima consulta médica. "
-                f"Este documento facilitará su continuidad de tratamiento en el hospital de adultos. Los esperamos."
+            # Sin enlace no se ofrece boton. Un boton que no funciona hace que
+            # alguien busque la forma de mandarlo por su cuenta, que es
+            # exactamente lo que la guarda viene a evitar.
+            st.error(
+                f"No se genera enlace: {resultado_wsp.detalle}"
             )
-
-        st.text_area("Contenido del mensaje a despachar:", value=cuerpo_mensaje, height=130)
-
-        url_whatsapp = f"https://wa.me/51{telefono_limpio}?text={quote(cuerpo_mensaje)}"
-
-        st.markdown(
-            f"""
-            <a href="{url_whatsapp}" target="_blank" style="text-decoration:none;">
-                <div style="background-color:#2e7d32;color:#ffffff;text-align:center;padding:10px 16px;border-radius:4px;font-weight:700;font-size:0.9rem;margin-top:10px;">
-                    Abrir Chat de WhatsApp (+51 {telefono_limpio[:3]} {telefono_limpio[3:6]} {telefono_limpio[6:]})
-                </div>
-            </a>
-            """,
-            unsafe_allow_html=True,
-        )
 
     with col_w2:
         st.markdown("##### Protección de Datos y Privacidad Asistencial")
