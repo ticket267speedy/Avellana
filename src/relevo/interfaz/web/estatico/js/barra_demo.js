@@ -56,10 +56,10 @@ export async function montar(contenedor, repintar) {
 function enganchar(contenedor, repintar) {
   contenedor.querySelector(".demo-rol").addEventListener("change", async (evento) => {
     const rol = evento.target.value;
-    // Se valida contra el servidor: asi la demo demuestra que el rol existe de
-    // verdad en el modelo y no solo en el desplegable.
-    const respuesta = await cambiarRolServidor(rol).catch(() => null);
+    // Actualiza el estado local antes de navegar para que la vista nueva use el
+    // rol correcto aunque la respuesta del servidor tarde un instante.
     fijarRol(rol, rol === "profesional_receptor" ? ESTABLECIMIENTO_DEMO : "");
+    const respuesta = await cambiarRolServidor(rol).catch(() => null);
     ir(respuesta ? respuesta.ruta_inicial : "#/entrar");
   });
 

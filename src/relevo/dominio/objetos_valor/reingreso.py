@@ -69,8 +69,8 @@ class MotivoReingreso(Enum):
 
 
 _ETIQUETAS_MOTIVO: dict[MotivoReingreso, str] = {
-    MotivoReingreso.REAPARECE_TRAS_PERDIDA: "Reaparece tras perdida de seguimiento",
-    MotivoReingreso.NO_ASISTIO_A_PRIMERA_CITA: "No asistio a la primera cita",
+    MotivoReingreso.REAPARECE_TRAS_PERDIDA: "Reaparece tras pérdida de seguimiento",
+    MotivoReingreso.NO_ASISTIO_A_PRIMERA_CITA: "No asistió a la primera cita",
     MotivoReingreso.ATENDIDO_SIN_CONTINUIDAD: "Atendido una vez, sin continuidad",
     MotivoReingreso.CAMBIO_DE_DESTINO: "Cambio de destino",
 }
@@ -148,13 +148,13 @@ _ETIQUETAS_ACCION: dict[AccionCiclo, str] = {
     AccionCiclo.CONTACTAR_FAMILIA: "Contactar a la familia",
     AccionCiclo.REGISTRAR_REINGRESO: "Registrar reingreso al ciclo",
     AccionCiclo.RECLASIFICAR_CICLO: "Reclasificar el ciclo",
-    AccionCiclo.AVANZAR_TRAMITE: "Registrar avance del tramite",
-    AccionCiclo.REGISTRAR_PERDIDA: "Registrar perdida de seguimiento",
+    AccionCiclo.AVANZAR_TRAMITE: "Registrar avance del trámite",
+    AccionCiclo.REGISTRAR_PERDIDA: "Registrar pérdida de seguimiento",
     AccionCiclo.PROGRAMAR_CONSULTA_INSN: "Programar consulta en el INSN",
     AccionCiclo.EMITIR_PASAPORTE: "Emitir un Pasaporte nuevo",
-    AccionCiclo.ACTUALIZAR_DIAGNOSTICO: "Actualizar diagnostico",
+    AccionCiclo.ACTUALIZAR_DIAGNOSTICO: "Actualizar diagnóstico",
     AccionCiclo.AJUSTAR_TRATAMIENTO: "Ajustar tratamiento",
-    AccionCiclo.REGISTRAR_EVALUACION_CLINICA: "Registrar evaluacion clinica",
+    AccionCiclo.REGISTRAR_EVALUACION_CLINICA: "Registrar evaluación clínica",
 }
 
 

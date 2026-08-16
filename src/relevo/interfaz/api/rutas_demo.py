@@ -13,16 +13,18 @@ cosa que un jurado tecnico pregunta.
 
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Response, status
 
 from relevo.dominio.entidades.ciclo_transicion import EstadoCiclo
 from relevo.dominio.excepciones import TransicionInvalida
 from relevo.dominio.objetos_valor.reingreso import MotivoReingreso
+from relevo.interfaz.api.autenticacion import NOMBRE_COOKIE_SESION
 from relevo.interfaz.api.dependencias import (
     FECHA_DEMO,
     ContenedorDep,
     HoyDep,
     exigir_ciclo,
+    obtener_gestor_auth,
 )
 from relevo.interfaz.api.esquemas import (
     AvanzarEtapaEntrada,
@@ -141,12 +143,14 @@ def avanzar_etapa(
 
 
 @router.post("/cambiar-rol")
-def cambiar_rol(entrada: CambiarRolEntrada) -> dict[str, str]:
-    """Devuelve el rol validado y a donde va. NO es autenticacion.
+def cambiar_rol(
+    entrada: CambiarRolEntrada, response: Response
+) -> dict[str, str]:
+    """Valida el rol y persiste la sesion de prueba del navegador.
 
-    El servidor no guarda sesion todavia: la interfaz manda el rol elegido en
-    la cabecera `X-Relevo-Rol` en cada peticion. Esto solo valida que el valor
-    exista y dice cual es la pantalla inicial de ese rol.
+    En la demo, el cambio de rol debe comportarse como una sesion real de la
+    interfaz: si el usuario cambia de paciete a INSN o viceversa, la nueva
+    identidad sigue siendo la activa en la siguiente pantalla y al recargar.
     """
     try:
         rol = Rol(entrada.rol)
@@ -156,9 +160,22 @@ def cambiar_rol(entrada: CambiarRolEntrada) -> dict[str, str]:
             f"'{entrada.rol}' no es un rol. Validos: "
             + ", ".join(r.value for r in Rol),
         ) from None
+
+    gestor = obtener_gestor_auth()
+    sesion = gestor.crear_sesion_para_rol(rol)
+    response.set_cookie(
+        key=NOMBRE_COOKIE_SESION,
+        value=sesion.token,
+        httponly=True,
+        samesite="strict",
+        max_age=12 * 3600,
+    )
     return {
         "rol": rol.value,
         "etiqueta": rol.etiqueta,
         "ruta_inicial": rol.ruta_inicial,
-        "aviso": "La seleccion de rol en la demo no es autenticacion.",
+        "aviso": (
+            "La seleccion de rol queda fijada en la sesion de la demo; "
+            "esto no es autenticacion."
+        ),
     }

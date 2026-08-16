@@ -252,12 +252,12 @@ class EvaluacionPlazo:
         if self.situacion is SituacionPlazo.VENCIDO:
             return (
                 f"{self.paciente_id}: {self.estado.etiqueta} vencido hace "
-                f"{-(restantes or 0)} dias{turno}"
+                f"{-(restantes or 0)} días{turno}"
             )
         if self.situacion is SituacionPlazo.POR_VENCER:
             return (
                 f"{self.paciente_id}: {self.estado.etiqueta} vence en "
-                f"{restantes} dias{turno}"
+                f"{restantes} días{turno}"
             )
         return f"{self.paciente_id}: {self.estado.etiqueta} en plazo"
 

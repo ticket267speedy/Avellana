@@ -151,3 +151,35 @@ def descargar_pasaporte(
             )
         },
     )
+
+
+@router.get("/api/pacientes/{paciente_id}/fhir")
+def descargar_fhir(
+    paciente_id: str,
+    contenedor: ContenedorDep,
+    hoy: HoyDep,
+    rol: RolDep,
+    establecimiento: EstablecimientoDep,
+) -> Response:
+    """El Bundle HL7 FHIR CorePE R4 (MINSA) en JSON, listo para intercambio institucional.
+
+    Estructura validada conforme a la Guía Nacional CorePE y al International Patient Summary.
+    """
+    exigir_lectura_clinica(rol)
+    if rol is Rol.PROFESIONAL_RECEPTOR:
+        exigir_visibilidad(
+            exigir_ciclo(contenedor, paciente_id), rol, establecimiento
+        )
+
+    paciente = exigir_paciente(contenedor, paciente_id)
+    fhir_json = contenedor.emitir_fhir(paciente, hoy)
+    return Response(
+        content=fhir_json,
+        media_type="application/json",
+        headers={
+            "Content-Disposition": (
+                f'attachment; filename="FHIR_CorePE_{paciente_id}.json"'
+            )
+        },
+    )
+

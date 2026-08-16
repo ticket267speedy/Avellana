@@ -52,7 +52,16 @@ export function arrancar(contenedor, alFallar) {
 
     contenedor.innerHTML = '<p class="cargando">Cargando…</p>';
     try {
-      const html = await encontrada.render(encontrada.parametros);
+      const resultado = await encontrada.render(encontrada.parametros);
+      // Una vista puede devolver el HTML a secas, o { html, enganchar }
+      // cuando necesita manejadores de clic. Se acepta lo primero por
+      // simplicidad, pero SIEMPRE se resuelve a esta forma antes de tocar el
+      // DOM: es lo que garantiza que enganchar() nunca corra antes de que el
+      // HTML este pintado.
+      const html = typeof resultado === "string" ? resultado : resultado.html;
+      const enganchar =
+        typeof resultado === "string" ? null : resultado.enganchar;
+
       contenedor.innerHTML = html;
       // Los manejadores se enganchan DESPUES de pintar, no con onclick en el
       // HTML: el HTML lo compone cada vista con datos del servidor, y un
@@ -63,6 +72,13 @@ export function arrancar(contenedor, alFallar) {
           ir(elemento.dataset.ir);
         });
       });
+      // Se llama de forma SINCRONA, aqui mismo, justo despues de asignar
+      // innerHTML. Antes se enganchaba con `queueMicrotask` desde dentro de
+      // la vista, y el orden real de la cola de microtareas hacia que
+      // enganchar() corriera ANTES de que este innerHTML se asignara: los
+      // botones existian un instante despues, pero ya sin manejador. Por eso
+      // ningun boton de ninguna vista respondia a un clic.
+      if (enganchar) enganchar();
     } catch (error) {
       alFallar(error, contenedor);
     }

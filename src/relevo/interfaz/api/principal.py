@@ -32,10 +32,12 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from relevo.interfaz.api import (
-    rutas_aprendizaje,
     rutas_apoderado,
+    rutas_aprendizaje,
+    rutas_auth,
     rutas_conciliacion,
     rutas_demo,
+    rutas_digitalizacion,
     rutas_insn,
     rutas_metricas,
     rutas_pacientes,
@@ -44,6 +46,8 @@ from relevo.interfaz.api import (
 
 # `src/relevo/interfaz/api/principal.py` -> `src/relevo/interfaz/web/`
 WEB = Path(__file__).resolve().parents[1] / "web"
+RAIZ_PROYECTO = Path(__file__).resolve().parents[4]
+DATA = RAIZ_PROYECTO / "data"
 
 DESCRIPCION = """
 **Relevo** — acompanamiento de la transicion pediatrico-adulto, INSN San Borja.
@@ -76,6 +80,7 @@ app = FastAPI(
 # version, `app.routes` los deja planos o los envuelve, y un test de
 # arquitectura que se rompe al actualizar una dependencia se acaba borrando.
 ROUTERS = (
+    rutas_auth.router,
     rutas_pacientes.router,
     rutas_aprendizaje.router,
     rutas_conciliacion.router,
@@ -84,6 +89,7 @@ ROUTERS = (
     rutas_apoderado.router,
     rutas_metricas.router,
     rutas_demo.router,
+    rutas_digitalizacion.router,
 )
 
 for _router in ROUTERS:
@@ -113,6 +119,11 @@ if (WEB / "index.html").exists() and (WEB / "estatico").is_dir():
         "/estatico",
         StaticFiles(directory=WEB / "estatico"),
         name="estatico",
+    )
+    app.mount(
+        "/data",
+        StaticFiles(directory=DATA),
+        name="data",
     )
 
     @app.get("/", include_in_schema=False)

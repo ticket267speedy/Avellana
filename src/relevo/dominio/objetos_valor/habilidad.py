@@ -68,13 +68,13 @@ _NUMEROS: dict[Habilidad, int] = {
 }
 
 _TITULOS: dict[Habilidad, str] = {
-    Habilidad.CONOZCO_MI_CONDICION: "Conozco mi condicion",
+    Habilidad.CONOZCO_MI_CONDICION: "Conozco mi condición",
     Habilidad.MANEJO_MI_TRATAMIENTO: "Manejo mi tratamiento",
     Habilidad.HABLO_CON_MI_EQUIPO: "Hablo con mi equipo de salud",
     Habilidad.NAVEGO_EL_SISTEMA: "Navego el sistema de salud",
     Habilidad.CUIDO_MIS_DOCUMENTOS: "Cuido mis documentos",
     Habilidad.CONOZCO_MIS_DERECHOS: "Conozco mis derechos",
-    Habilidad.ENTIENDO_LA_TRANSICION: "Entiendo la transicion",
+    Habilidad.ENTIENDO_LA_TRANSICION: "Entiendo la transición",
 }
 
 
@@ -97,7 +97,7 @@ class EstadoHabilidad(Enum):
     def etiqueta(self) -> str:
         return {
             EstadoHabilidad.POR_INICIAR: "Por iniciar",
-            EstadoHabilidad.EN_PRACTICA: "En practica",
+            EstadoHabilidad.EN_PRACTICA: "En práctica",
             EstadoHabilidad.LOGRADA: "Lograda",
             EstadoHabilidad.NECESITA_REFUERZO: "Necesita refuerzo",
         }[self]
@@ -127,7 +127,7 @@ class EstadoContenido(Enum):
     def sello(self) -> str | None:
         """El texto que se muestra encima de la leccion. None si esta completa."""
         if self is EstadoContenido.ESQUELETO_PENDIENTE_VALIDACION:
-            return "Contenido pendiente de validacion clinica del INSN"
+            return "Contenido pendiente de validación clínica del INSN"
         return None
 
     @property

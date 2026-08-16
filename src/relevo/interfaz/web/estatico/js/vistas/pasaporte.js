@@ -8,7 +8,13 @@
 // El PDF se descarga del endpoint que ya existia. Sale con marca de agua y con
 // el aviso normativo al pie.
 
-import { verPaciente, verConciliacion, declararMedicacion, urlPasaporte } from "../api.js";
+import {
+  verPaciente,
+  verConciliacion,
+  declararMedicacion,
+  urlPasaporte,
+  urlFHIR,
+} from "../api.js";
 import { hoyActual } from "../estado.js";
 import { esc } from "../enrutador.js";
 import { lineaMedicacion, listaDiscrepancias } from "../componentes/badge_origen.js";
@@ -24,26 +30,32 @@ export async function render(parametros) {
     <section class="pasaporte">
       <h1>Pasaporte de Salud 18+</h1>
       <p class="pasaporte-meta">
-        ${esc(id)} · ${paciente.edad} anios ·
+        ${esc(id)} · ${paciente.edad} años ·
         ${paciente.meses_restantes >= 0
           ? `${paciente.meses_restantes} meses hasta el corte`
-          : "ya cumplio 18"}
+          : "ya cumplió 18"}
         · Seguro: ${esc(paciente.tipo_seguro)}
       </p>
 
-      <p><a class="boton" href="${urlPasaporte(id)}" target="_blank" rel="noopener">
-        Descargar el PDF para imprimir y firmar</a></p>
+      <div class="acciones-pasaporte" style="display:flex;flex-wrap:wrap;gap:10px;margin:12px 0;">
+        <a class="boton" href="${urlPasaporte(id)}" target="_blank" rel="noopener">
+          Descargar Pasaporte PDF
+        </a>
+        <a class="boton boton-secundario" href="${urlFHIR(id)}" target="_blank" rel="noopener">
+          Exportar HL7 FHIR CorePE (MINSA)
+        </a>
+      </div>
 
       <div class="tarjeta">
-        <h2>Que tengo</h2>
+        <h2>Qué tengo</h2>
         <ul class="lista-simple">
           ${paciente.diagnosticos.map((d) => `<li>${esc(d)}</li>`).join("") ||
-            "<li>Sin diagnosticos registrados</li>"}
+            "<li>Sin diagnósticos registrados</li>"}
         </ul>
       </div>
 
       <div class="tarjeta">
-        <h2>Que tomo</h2>
+        <h2>Qué tomo</h2>
         <ul class="lista-medicacion">
           ${conciliacion.lineas.map(lineaMedicacion).join("") ||
             "<li>Sin medicacion registrada</li>"}
@@ -53,7 +65,7 @@ export async function render(parametros) {
       </div>
 
       <div class="tarjeta">
-        <h2>A que soy alergico</h2>
+        <h2>¿A qué soy alérgico?</h2>
         <ul class="lista-simple">
           ${paciente.alergias.map((a) => `<li>${esc(a)}</li>`).join("") ||
             "<li>Sin alergias registradas</li>"}
@@ -70,10 +82,10 @@ export async function render(parametros) {
       }
 
       <p class="aviso-normativo">
-        Documento informativo complementario para la transicion asistencial. No
-        reemplaza la historia clinica ni el resumen de historia clinica normado
+        Documento informativo complementario para la transición asistencial. No
+        reemplaza la historia clínica ni el resumen de historia clínica normado
         (RM 214-2018-MINSA). Elaborado con apoyo automatizado, revisado y
-        firmado por el medico tratante.
+        firmado por el médico tratante.
       </p>
     </section>`;
 }
@@ -85,10 +97,10 @@ export async function render(parametros) {
 function formularioDeclaracion(id) {
   return `
     <details class="declarar">
-      <summary>Lo que tomo de verdad no coincide con esta lista</summary>
+      <summary>Lo que tomé de verdad no coincide con esta lista</summary>
       <p class="declarar-nota">
-        Cuentanoslo. <strong>No se cambia tu Pasaporte con esto</strong>: se
-        abre una revision para que el equipo del INSN lo coteje contigo.
+        Cuéntanoslo. <strong>No se cambia tu Pasaporte con esto</strong>: se
+        abre una revisión para que el equipo del INSN lo coteje contigo.
       </p>
       <form data-declarar="${esc(id)}">
         <label>Medicamento
@@ -97,10 +109,10 @@ function formularioDeclaracion(id) {
         <label>Dosis (como te la sabes)
           <input name="dosis" maxlength="80" autocomplete="off">
         </label>
-        <label>Cada cuanto
+        <label>Cada cuánto
           <input name="frecuencia" maxlength="80" autocomplete="off">
         </label>
-        <button class="boton" type="submit">Enviar para revision</button>
+        <button class="boton" type="submit">Enviar para revisión</button>
       </form>
       <p class="respuesta-declaracion" role="status"></p>
     </details>`;

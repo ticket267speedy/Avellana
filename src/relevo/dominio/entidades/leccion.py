@@ -58,7 +58,7 @@ class Leccion:
     """Una leccion del recorrido, completa o en esqueleto.
 
     `estado_contenido` no es metadato administrativo: decide si la interfaz
-    pinta el sello "Contenido pendiente de validacion clinica del INSN". Una
+    pinta el sello "Contenido pendiente de validación clínica del INSN". Una
     leccion en esqueleto se muestra igual —el adolescente ve que existe y de
     que va— pero nunca se presenta como material validado.
     """

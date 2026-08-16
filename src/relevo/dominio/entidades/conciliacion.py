@@ -78,7 +78,7 @@ class EstadoConciliacion(Enum):
     def etiqueta(self) -> str:
         return {
             EstadoConciliacion.ABIERTO: "Abierto",
-            EstadoConciliacion.EN_REVISION: "En revision",
+            EstadoConciliacion.EN_REVISION: "En revisión",
             EstadoConciliacion.RESUELTO: "Resuelto",
         }[self]
 
@@ -107,7 +107,7 @@ class Discrepancia:
         if self.tipo is TipoDiscrepancia.FALTA_EN_DECLARACION:
             return (
                 f"{self.medicamento}: el Pasaporte lo registra y el paciente no "
-                "lo menciono"
+                "lo mencionó"
             )
         return (
             f"{self.medicamento}: Pasaporte dice "

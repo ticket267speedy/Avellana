@@ -1,80 +1,118 @@
 # Relevo
 
-**Sistema de acompañamiento de la transición pediátrico-adulto**
-Reto 1 — Hackathon INSN San Borja · *"Puente 18+"* · **Equipo Avellana**
+Sistema de acompañamiento para la transición pediátrico-adulto del INSN San Borja.
 
----
+## Objetivo
 
-## El problema en una frase
+Detectar pacientes crónicos, raros o complejos que se acercan a los 18 años, priorizarlos con reglas audibles, generar un documento de traspaso, avisar por correo o WhatsApp y seguir el ciclo hasta confirmar que el paciente llegó al servicio de adultos.
 
-El INSN San Borja no atiende a mayores de 18 años bajo ninguna circunstancia. Cada año, del orden de doscientos pacientes con enfermedades crónicas, raras o complejas cruzan esa frontera — y nadie sabe cuántos llegan al otro lado.
+La regla de negocio central es dura: el INSN no atiende mayores de 18 años bajo ninguna circunstancia. El corte es exacto y total.
 
-> El problema no se ve porque pasa de a uno. Se pierde un paciente por día. Nadie lo nota. A fin de año son doscientas personas sin continuidad de atención.
+## Arquitectura hexagonal
 
----
+El proyecto sigue una arquitectura hexagonal con capas internas y externas:
 
-## Qué hace el sistema
+- dominio: reglas de negocio, entidades, validaciones, puertos
+- aplicacion: casos de uso
+- infraestructura: adaptadores, persistencia, OCR, FHIR, notificaciones
+- interfaz: API web y navegadores
 
-1. **Un proceso nocturno** que corre solo, prioriza la cohorte de 14 a 18 años con un índice explicable, y prepara lo que haga falta.
-2. **Avisos que llegan solos** — correo al equipo clínico, mensajes de WhatsApp listos para enviar a la familia. Nadie tiene que revisar una pantalla nueva.
-3. **El Pasaporte de Salud 18+** — un documento impreso que el paciente se lleva, generado en tres versiones escalonadas a los 14, 16 y 17 años.
-4. **Seguimiento del ciclo** hasta confirmar que el paciente efectivamente llegó al servicio de adultos.
+Las dependencias apuntan hacia adentro. El dominio no depende de frameworks ni de servicios externos.
 
-**No toca el sistema del hospital.** Solo lectura, por un adaptador intercambiable.
+## Requisitos
 
----
+- Python 3.12+
+- Ollama instalado localmente para OCR
+- acceso local a la red de la máquina
+- entorno sin internet para la operación principal
 
-## Principios
+## Dependencias
 
-| Principio | Qué significa |
-|---|---|
-| **El sistema busca a la persona** | Ninguna pantalla es de revisión obligatoria diaria. Los avisos llegan. |
-| **Determinístico donde importa la seguridad** | La detección es un motor de reglas auditable, no un modelo opaco. |
-| **El médico siempre firma** | Ninguna salida clínica se emite sin revisión humana. |
-| **Cero pesos** | Sin APIs de pago, sin licencias, sin proceso de adquisición. |
-| **Ningún dato real** | Todo sintético mientras dure el hackathon. |
+Instalar el entorno del proyecto:
 
----
-
-## Estado
-
-🚧 En construcción. Ver `docs/PLAN_TECNICO.md` §12 para el orden de trabajo.
-
----
-
-## Documentación
-
-| Archivo | Para qué |
-|---|---|
-| [`CLAUDE.md`](CLAUDE.md) | Reglas operativas para el agente de código |
-| [`docs/PLAN_TECNICO.md`](docs/PLAN_TECNICO.md) | **La especificación técnica completa** |
-| [`docs/DOSSIER.md`](docs/DOSSIER.md) | El proyecto completo, con glosario — para compartir con el equipo |
-| [`docs/VACIOS_ORIGINALIDAD_IMPACTO.md`](docs/VACIOS_ORIGINALIDAD_IMPACTO.md) | Reflexión crítica interna |
-| [`docs/PREGUNTAS_MENTOR.md`](docs/PREGUNTAS_MENTOR.md) | Preguntas abiertas al mentor del INSN |
-| [`docs/maqueta_mvp.html`](docs/maqueta_mvp.html) | Maqueta visual de las pantallas |
-
----
-
-## Cómo levantarlo
-
-```bash
+```powershell
 python -m venv .venv
-.venv\Scripts\activate          # Windows
-pip install -e ".[dev]"
-python -m relevo.interfaz.cli.generar_cohorte --n 300
-python -m relevo.interfaz.cli.correr_noche
-streamlit run src/relevo/interfaz/web/app.py
+.\.venv\Scripts\Activate.ps1
+pip install -U pip
+pip install -e ".[api,dev,fhir,pdf]"
 ```
 
----
+Si se quiere conservar el soporte de la vista web antigua con Streamlit, también se puede instalar:
 
-## Fuentes que sostienen el diseño
+```powershell
+pip install -e ".[web]"
+```
 
-- **RM 478-2026-MINSA** (11 may 2026) — listado vigente de enfermedades raras: 558 diagnósticos en CIE-10
-- **Complex Chronic Conditions v2** (Feudtner, *BMC Pediatrics*) — clasificación de condiciones crónicas complejas sobre CIE-10
-- **HL7 FHIR CorePE** — guía de implementación nacional del MINSA, FHIR R4
-- **NT 018-MINSA/DGSP-V.01** — Sistema de Referencia y Contrarreferencia
-- **RM 214-2018-MINSA** — Gestión de la Historia Clínica
-- **Got Transition — Six Core Elements** y **Ready Steady Go** (NHS)
-- **TRAQ** — cuestionario de preparación, versión en español validada
-- Estudio DIRIS Lima Norte (*Revista Médica Herediana*) — 19 951 referencias analizadas; **0.55 % de contrarreferencias**; mediana de espera aceptación→cita de **80–85 días**
+## Inicio del sistema
+
+### 1. Arrancar la API y la web estática
+
+```powershell
+.\.venv\Scripts\python.exe -m uvicorn relevo.interfaz.api.principal:app --host 0.0.0.0 --port 8000
+```
+
+Abrir en el navegador:
+
+- http://localhost:8000
+
+### 2. Verificar que el OCR local esté disponible
+
+Instalar y levantar Ollama en la máquina local:
+
+```powershell
+ollama pull glm-ocr
+ollama serve
+```
+
+La aplicación consulta el endpoint de Ollama en localhost, usando el modelo configurado por la infraestructura local. Si el modelo corre fuera de esta máquina (por ejemplo, por un túnel o un equipo del laboratorio), se puede redirigir con la variable de entorno:
+
+```powershell
+$env:RELEVO_OLLAMA_HOST = "http://localhost:11434"
+# o un host remoto expuesto por tunel, por ejemplo:
+# $env:RELEVO_OLLAMA_HOST = "http://host-del-tunel:11434"
+```
+
+La app usa este valor si existe; si no, vuelve a `http://localhost:11434`.
+
+### 3. Ejecutar pruebas relevantes
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests -q
+```
+
+## Estructura principal
+
+- src/relevo/dominio/: reglas y entidades del negocio
+- src/relevo/aplicacion/: casos de uso
+- src/relevo/infraestructura/: adaptadores, OCR, FHIR, almacenamiento, notificaciones
+- src/relevo/interfaz/: API web y capas de entrada
+- tests/: pruebas del dominio, infraestructura e interfaz
+- config/: reglas clínicas, destinos y semilla de demo
+- data/corpus_demo/: corpus sintético de demo que se entrega con el repo para que la OCR funcione sin regenerar fichas
+- data/corpus/: corpus local generado por la máquina, no versionado ni entregado como dato real
+
+## Reglas de calidad
+
+- el dominio no puede importar librerías externas ni frameworks
+- las validaciones no deben dar lugar a valores inventados
+- la salida clínica requiere revisión humana
+- todo dato sintético y no real
+- la lógica de corte por edad es estricta y no negociable
+
+## Documentación útil
+
+- docs/PLAN_TECNICO.md: especificación técnica del proyecto
+- docs/DOSSIER.md: contexto funcional y de negocio
+- docs/ARQUITECTURA.md: explicación general de la arquitectura
+- docs/GUIA_OLLAMA.md: guía de instalación y uso local del OCR
+- docs/ARQUITECTURA_SOFTWARE.md: resumen técnico para integración y mantenimiento
+- docs/ESTRUCTURA_TECNICA.md: estructura técnica del repositorio y cómo se organiza el software
+- docs/CONTEXTO_IA.md: contexto compacto para alimentar una IA de apoyo
+
+## Limitaciones del MVP
+
+- no se escribe en sistemas del hospital
+- no se usan APIs de pago ni licencias comerciales
+- no se depende de internet para el funcionamiento principal
+- los mensajes de WhatsApp no contienen diagnósticos ni dosis ni resultados
+- el resumen clínico requiere firma del médico

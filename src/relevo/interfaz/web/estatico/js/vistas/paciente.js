@@ -30,7 +30,7 @@ export async function render() {
   return `
     <section class="paciente">
       ${esApoderado ? avisoApoderado(permisos) : ""}
-      <h1>${esApoderado ? "Como va el traspaso" : "Tu traspaso"}</h1>
+      <h1>${esApoderado ? "Cómo va el traspaso" : "Tu traspaso"}</h1>
 
       <div class="tarjeta destacada">
         <p class="estado-llano">${esc(ciclo.etiqueta_llana)}</p>
@@ -44,8 +44,8 @@ export async function render() {
       <div class="tarjeta">
         <h2>Tu Pasaporte de Salud 18+</h2>
         <p>
-          Es el documento que te llevas y que le entregas al medico de adultos.
-          Lo firma tu medico tratante.
+          Es el documento que te llevas y que le entregas al médico de adultos.
+          Lo firma tu médico tratante.
         </p>
         ${
           !esApoderado || permisos.puede_ver_pasaporte
@@ -53,17 +53,43 @@ export async function render() {
                  rel="noopener">Abrir mi Pasaporte (PDF)</a></p>
                <p><a href="#/pasaporte/${esc(id)}" data-ir="/pasaporte/${esc(id)}">
                  Ver el detalle en pantalla →</a></p>`
-            : `<p class="aviso">El paciente no autorizo el acceso al Pasaporte
-                 completo. Puede hacerlo desde su propia sesion.</p>`
+            : `<p class="aviso">El paciente no autorizó el acceso al Pasaporte
+                 completo. Puede hacerlo desde su propia sesión.</p>`
         }
       </div>
 
-      ${aprendizaje ? "" : ""}
+      ${bloqueDigitalizacion(esApoderado)}
       <div class="tarjeta">
         <h2>Tus tareas pendientes</h2>
         ${tareas(ciclo, aprendizaje)}
       </div>
     </section>`;
+}
+
+function bloqueDigitalizacion(esApoderado) {
+  if (esApoderado) {
+    return `
+      <div class="tarjeta">
+        <h2>Acceso del apoderado</h2>
+        <p>
+          El apoderado ve el estado del trámite y, cuando corresponde, el
+          Pasaporte autorizado. No tiene acceso a cargar historias clínicas ni a
+          la lectura OCR del profesional del INSN.
+        </p>
+      </div>`;
+  }
+
+  return `
+    <div class="tarjeta">
+      <h2>Sube tu historia clínica</h2>
+      <p>
+        Puedes subir un documento escaneado para que la lectura automática
+        extraiga los datos clave antes de que un profesional los revise.
+      </p>
+      <p><a class="boton" href="#/paciente/digitalizacion" data-ir="/paciente/digitalizacion">
+        Abrir lectura de documentos →
+      </a></p>
+    </div>`;
 }
 
 function proximaActividad(aprendizaje) {
@@ -95,11 +121,11 @@ function tareas(ciclo, aprendizaje) {
   }
   if (aprendizaje && aprendizaje.siguiente_leccion) {
     lista.push(
-      `Trabajar la leccion ${aprendizaje.siguiente_leccion} de Entrenate.`
+      `Trabajar la lección ${aprendizaje.siguiente_leccion} de Entrenate.`
     );
   }
-  lista.push("Revisar que tu telefono este actualizado.");
-  lista.push("Contarnos que medicamentos estas tomando de verdad.");
+  lista.push("Revisar que tu teléfono esté actualizado.");
+  lista.push("Contarnos qué medicamentos estás tomando de verdad.");
 
   return `<ul class="tareas">${lista.map((t) => `<li>${t}</li>`).join("")}</ul>`;
 }
@@ -117,14 +143,14 @@ function avisoApoderado(permisos) {
 function bloqueadoPorEdad(permisos) {
   return `
     <section class="tarjeta bloqueado">
-      <h1>Tu acceso termino</h1>
+      <h1>Tu acceso terminó</h1>
       <p>${esc(permisos.aviso || "")}</p>
       <p class="norma">
         Base legal: ${esc(permisos.base_legal_etiqueta)} · ${esc(permisos.norma)}
       </p>
       <p>
-        Esto no es un fallo del sistema. Al cumplir 18 anios, la informacion de
-        salud pasa a ser exclusivamente del paciente, y solo el puede volver a
+        Esto no es un fallo del sistema. Al cumplir 18 años, la información de
+        salud pasa a ser exclusivamente del paciente, y solo él puede volver a
         autorizar el acceso.
       </p>
     </section>`;

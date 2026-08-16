@@ -14,6 +14,7 @@ import * as leccion from "./vistas/leccion.js";
 import * as pasaporte from "./vistas/pasaporte.js";
 import * as radar from "./vistas/radar.js";
 import * as bandeja from "./vistas/bandeja.js";
+import * as digitalizacion from "./vistas/digitalizacion.js";
 
 const app = document.getElementById("app");
 const barra = document.getElementById("barra-demo");
@@ -24,11 +25,13 @@ const barra = document.getElementById("barra-demo");
 const VISTAS = [
   ["/entrar", entrar],
   ["/paciente", paciente],
+  ["/paciente/digitalizacion", digitalizacion],
   ["/paciente/ruta", ruta],
   ["/paciente/entrenate", entrenate],
   ["/paciente/leccion/:numero", leccion],
   ["/pasaporte/:id", pasaporte],
   ["/insn/radar", radar],
+  ["/insn/digitalizacion", digitalizacion],
   ["/receptor/bandeja", bandeja],
 ];
 
@@ -37,13 +40,14 @@ let repintar = () => {};
 VISTAS.forEach(([patron, modulo]) => {
   registrar(patron, async (parametros) => {
     const html = await modulo.render(parametros);
-    // El enganche corre despues de que el router escriba el HTML: se aplaza un
-    // tick porque el router asigna innerHTML DESPUES de que esta funcion
-    // devuelva.
-    if (modulo.enganchar) {
-      queueMicrotask(() => modulo.enganchar(app, repintar));
-    }
-    return html;
+    // Se devuelve el enganche junto con el HTML, sin ejecutarlo aqui. Es el
+    // router (`enrutador.js`) quien lo llama, y lo hace justo despues de
+    // asignar `innerHTML` — nunca antes. Un `queueMicrotask` aqui corria antes
+    // de que el HTML estuviera en el DOM, y por eso ningun boton respondia.
+    return {
+      html,
+      enganchar: modulo.enganchar ? () => modulo.enganchar(app, repintar) : null,
+    };
   });
 });
 

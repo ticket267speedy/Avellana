@@ -493,3 +493,25 @@ class EstadoDemoSalida(BaseModel):
     cadena_intacta: bool
     fecha_referencia: date
     aviso: str
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Autenticación (§8.3)
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+class EntradaLogin(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    usuario: str = Field(min_length=1)
+    password: str = Field(min_length=1)
+
+
+class SalidaSesion(BaseModel):
+    autenticado: bool
+    username: str = ""
+    nombre_completo: str = ""
+    rol: str = ""
+    rol_etiqueta: str = ""
+    establecimiento: str = ""
+    id_paciente: str = ""
+

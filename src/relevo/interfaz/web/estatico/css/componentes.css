@@ -1,7 +1,7 @@
-/* Los componentes reutilizables: turno, semaforo, insignias, linea de tiempo,
+/* Los componentes reutilizables: turno, semáforo, insignias, línea de tiempo,
  * barra de demo. */
 
-/* ── ¿Quien tiene el turno ahora? ────────────────────────────────────────── */
+/* ── ¿Quién tiene el turno ahora? ────────────────────────────────────────── */
 
 .turno {
   background: var(--acento-suave);
@@ -36,6 +36,26 @@
 .turno-breve {
   font-size: 0.85rem;
   white-space: nowrap;
+}
+
+/* La insignia de texto que reemplaza al emoji: el emoji se ve distinto segun
+ * el sistema y el navegador, y no siempre dice nada por si solo a quien no
+ * tiene costumbre de leerlos. Un rotulo corto con color es mas fiable. */
+.turno-icono {
+  display: inline-block;
+  padding: 0.05rem 0.4rem;
+  border-radius: 4px;
+  background: var(--acento);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-right: 0.3rem;
+}
+
+.turno-cerrado .turno-icono {
+  background: var(--verde);
 }
 
 /* ── Semaforo del IUT ────────────────────────────────────────────────────── */

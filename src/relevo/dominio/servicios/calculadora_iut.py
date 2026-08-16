@@ -4,6 +4,15 @@ PLAN_TECNICO §6.2:
 
     IUT = sigmoide(beta_0 + suma_i beta_i * x_i)
 
+BLINDAJE DISCURSIVO Y PRINCIPIO ETICO (§4.9 / MAPEO_RUBRICA_INSN #7):
+El IUT no prioriza pacientes; ordena la cola de trabajo del equipo de
+transicion. No decide quien se atiende primero en un hospital: decide a quien
+llama primero la trabajadora social o coordinadora de referencia. Es
+transparente — dz/dx_i = beta_i, cada factor con su peso visible y e^beta_i
+interpretable como razon de momios (odds ratio) —, es auditable, y cualquier
+persona puede reordenar la cola a mano, quedando ese reordenamiento registrado
+en la auditoria.
+
 CRITERIO DE ACEPTACION DEL BLOQUE 3: cinco casos calculados a mano en papel
 deben coincidir con el codigo. Ver `tests/dominio/test_calculadora_iut.py`.
 
@@ -233,13 +242,24 @@ class CalculadoraIUT:
         return self._aporte(X4_DEPENDENCIA_TECNOLOGICA, x)
 
     def _x5_brecha_preparacion(self, paciente: Paciente) -> AporteFactor:
-        """(5 - TRAQ)/4. Sin TRAQ se imputa 0.5 Y se marca dato_faltante."""
+        """(5 - TRAQ)/4. Sin TRAQ ni checklist INSN se imputa 0.5 Y se marca dato_faltante.
+
+        Soporta tanto el instrumento estandar TRAQ como el Checklist de 6 items
+        del INSN San Borja (Rubrica INSN #3).
+        """
         p = self.parametros
-        if paciente.traq is None:
-            return self._aporte(X5_BRECHA_PREPARACION, p.traq_imputacion, faltante=True)
-        rango = p.traq_maximo - p.traq_minimo
-        x = _acotar((p.traq_maximo - paciente.traq.puntaje) / rango)
-        return self._aporte(X5_BRECHA_PREPARACION, x)
+        if paciente.traq is not None:
+            rango = p.traq_maximo - p.traq_minimo
+            x = _acotar((p.traq_maximo - paciente.traq.puntaje) / rango)
+            return self._aporte(X5_BRECHA_PREPARACION, x)
+
+        if paciente.checklist_insn is not None:
+            rango = p.traq_maximo - p.traq_minimo
+            puntaje = paciente.checklist_insn.puntaje_traq_equivalente
+            x = _acotar((p.traq_maximo - puntaje) / rango)
+            return self._aporte(X5_BRECHA_PREPARACION, x)
+
+        return self._aporte(X5_BRECHA_PREPARACION, p.traq_imputacion, faltante=True)
 
     def _x6_riesgo_perdida(self, paciente: Paciente, hoy: date) -> AporteFactor:
         """clamp(delta / (2*theta), 0, 1) con theta = intervalo de control.

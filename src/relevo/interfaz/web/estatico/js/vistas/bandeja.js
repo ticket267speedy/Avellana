@@ -39,9 +39,9 @@ export async function render() {
     <section class="bandeja">
       <h1>Referencias entrantes (${filas.length})</h1>
       <p class="bandeja-intro">
-        Ordenadas por <strong>dias hasta el corte etario</strong> y no por fecha
-        de llegada: la urgente no es la mas antigua, sino la del adolescente que
-        se queda sin ningun servicio antes.
+        Ordenadas por <strong>días hasta el corte etario</strong> y no por fecha
+        de llegada: la urgente no es la más antigua, sino la del adolescente que
+        se queda sin ningún servicio antes.
       </p>
       ${filas.map(tarjeta).join("")}
     </section>`;
@@ -52,20 +52,20 @@ function tarjeta(f) {
     f.dias_para_corte === null
       ? ""
       : f.dias_para_corte < 0
-        ? `<span class="corte-pasado">Ya cumplio 18 hace ${-f.dias_para_corte} dias</span>`
+        ? `<span class="corte-pasado">Ya cumplió 18 hace ${-f.dias_para_corte} días</span>`
         : `<span class="${f.dias_para_corte < 90 ? "corte-cerca" : ""}">
-             Cumple 18 en ${f.dias_para_corte} dias</span>`;
+             Cumple 18 en ${f.dias_para_corte} días</span>`;
 
   return `
     <article class="referencia ${f.situacion_plazo === "vencido" ? "vencida" : ""}">
       <header>
         <span class="referencia-id">${esc(f.paciente_id)}</span>
-        <span class="referencia-edad">${f.edad} anios</span>
+        <span class="referencia-edad">${f.edad} años</span>
         ${corte}
       </header>
       <p class="referencia-dx">${esc(f.diagnostico_principal)}</p>
       <p class="referencia-estado">
-        ${esc(f.etiqueta)} · ${f.dias_en_estado} dias
+        ${esc(f.etiqueta)} · ${f.dias_en_estado} días
         <span class="plazo-${esc(f.situacion_plazo)}">${esc(f.situacion_plazo)}</span>
       </p>
       <div class="acciones">
@@ -105,7 +105,7 @@ function extras(f) {
   }
   if (f.estado === "cita_programada") {
     html += `<button class="boton-secundario" data-paciente="${esc(f.paciente_id)}"
-      data-accion="registrar_inasistencia">No se presento</button>`;
+      data-accion="registrar_inasistencia">No se presentó</button>`;
   }
   return html;
 }

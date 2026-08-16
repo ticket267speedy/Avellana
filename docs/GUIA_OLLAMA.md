@@ -75,6 +75,16 @@ Si contesta algo coherente, ya está listo.
 
 ## Paso 4 · Usarlo desde el proyecto
 
+Si Ollama corre en otra máquina o detrás de un túnel, no hace falta tocar el código. Basta con exportar la variable de entorno que usa la app:
+
+```powershell
+$env:RELEVO_OLLAMA_HOST = "http://host-del-tunel:11434"
+# por defecto, si no se setea, la app usa:
+# http://localhost:11434
+```
+
+Y luego:
+
 ```python
 from relevo.infraestructura.llm.extractor import CampoPedido, ExtractorDocumento
 from relevo.infraestructura.llm.lector_ollama import elegir_lectores

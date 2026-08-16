@@ -17,13 +17,13 @@ salidas/
 # Pero en Streamlit Cloud nadie puede generarlo, y sin el la pantalla de
 # digitalizacion —la mitad visible del proyecto— sale vacia en el despliegue.
 #
-# Aqui van 4 documentos (2.8 MB) cubriendo las tres variantes de degradacion,
-# con sus transcripciones ya producidas por el modelo local. Nada de esto es
-# dato de paciente: son documentos SINTETICOS generados por
+# Aqui van 12 documentos (demo OCR) cubriendo las tres variantes de degradacion,
+# con sus transcripciones y la verdad esperada ya producidas por el modelo local.
+# Nada de esto es dato de paciente: son documentos SINTETICOS generados por
 # `relevo.interfaz.cli.generar_corpus`, sin correspondencia con persona alguna.
-# La regla 1 de CLAUDE.md sigue intacta: lo que prohibe es dato real, y aqui no
-# hay ninguno.
+# La regla 1 sigue intacta: lo que prohibe es dato real, y aqui no hay ninguno.
 !data/corpus_demo/
+!data/corpus_demo/**
 
 # ─── FUENTES DESCARGADAS ───
 # Las fuentes manuscritas del corpus se descargan, no se versionan:
@@ -66,9 +66,11 @@ htmlcov/
 errores.txt
 *.log
 
-# ─── EDITOR ───
+# ─── EDITOR / AGENTE ───
 .vscode/
 .idea/
+.claude/
+.copilot/
 *.swp
 *~
 .DS_Store

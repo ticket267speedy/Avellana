@@ -442,6 +442,6 @@ def test_el_mensaje_del_aviso_dice_de_quien_es_el_turno(maquina: MaquinaCiclo) -
     ciclo = ciclo_nuevo()
     mensaje = maquina.evaluar(ciclo, INICIO + timedelta(days=45)).mensaje()
     assert mensaje == (
-        "P-1: En preparacion vencido hace 15 dias — turno de "
-        "Equipo de transicion del INSN"
+        "P-1: En preparación vencido hace 15 días — turno de "
+        "Equipo de transición del INSN"
     )

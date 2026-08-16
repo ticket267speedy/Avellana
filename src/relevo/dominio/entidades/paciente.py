@@ -13,12 +13,14 @@ from dataclasses import dataclass, field
 from datetime import date
 
 from relevo.dominio.entidades.diagnostico import (
+    ChecklistPreparacionINSN,
     Cirugia,
     Contacto,
     Diagnostico,
     Dispositivo,
     HistoriaTextoLibre,
     Medicamento,
+    PerfilPsicosocial,
     ResultadoTRAQ,
     TipoContacto,
     TipoSeguro,
@@ -55,6 +57,8 @@ class Paciente:
 
     ultima_consulta: date | None = None
     traq: ResultadoTRAQ | None = None
+    checklist_insn: ChecklistPreparacionINSN | None = None
+    psicosocial: PerfilPsicosocial | None = None
     texto_libre: HistoriaTextoLibre = field(default_factory=HistoriaTextoLibre)
 
     # ── Ventana y cohorte ────────────────────────────────────────────────────

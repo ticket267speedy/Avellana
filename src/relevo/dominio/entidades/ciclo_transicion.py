@@ -84,8 +84,8 @@ class FuenteConfirmacion(Enum):
     def etiqueta(self) -> str:
         return {
             FuenteConfirmacion.CONTRARREFERENCIA: "Contrarreferencia formal",
-            FuenteConfirmacion.CONFIRMACION_FAMILIA: "Confirmacion de la familia",
-            FuenteConfirmacion.CONFIRMACION_RECEPTOR: "Confirmacion del receptor",
+            FuenteConfirmacion.CONFIRMACION_FAMILIA: "Confirmación de la familia",
+            FuenteConfirmacion.CONFIRMACION_RECEPTOR: "Confirmación del receptor",
         }[self]
 
 

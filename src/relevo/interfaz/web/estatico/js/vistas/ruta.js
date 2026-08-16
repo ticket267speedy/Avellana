@@ -24,10 +24,10 @@ export async function render() {
     <section class="ruta">
       <h1>Tu recorrido</h1>
       <p class="ruta-intro">
-        Son siete etapas. Cumplir 18 anios <strong>no interrumpe</strong> este
+        Son siete etapas. Cumplir 18 años <strong>no interrumpe</strong> este
         recorrido: la primera cita en el hospital de adultos ocurre, por
-        definicion, despues de tu cumpleanos. Lo que si termina ese dia es la
-        atencion en el INSN.
+        definición, después de tu cumpleaños. Lo que sí termina ese día es la
+        atención en el INSN.
       </p>
 
       <div class="tarjeta">
@@ -40,7 +40,7 @@ export async function render() {
       </div>
 
       <div class="tarjeta">
-        <h2>¿Que tengo que hacer yo?</h2>
+        <h2>¿Qué tengo que hacer yo?</h2>
         ${queHacer(ciclo)}
       </div>
 
@@ -54,24 +54,24 @@ export async function render() {
 
 function queHacer(ciclo) {
   // Se responde SIEMPRE, incluso cuando la respuesta es "nada". "No tienes que
-  // hacer nada ahora mismo, estamos nosotros" es informacion util: la
-  // alternativa es que el paciente se quede con la duda de si se le olvido algo.
+  // hacer nada ahora mismo, estamos nosotros" es información útil: la
+  // alternativa es que el paciente se quede con la duda de si se le olvidó algo.
   const respuestas = {
     preparacion:
-      "Nada por ahora. Tu equipo del INSN esta armando tu expediente. Si te " +
-      "cambia el telefono, avisanos: es lo unico que puede hacer que te " +
+      "Nada por ahora. Tu equipo del INSN está armando tu expediente. Si te " +
+      "cambia el teléfono, avísanos: es lo único que puede hacer que te " +
       "perdamos.",
     referencia_enviada:
       "Nada por ahora. Estamos esperando que tu nuevo hospital confirme que " +
-      "recibio tus papeles.",
+      "recibió tus papeles.",
     recepcion_confirmada:
       "Nada por ahora. Tu nuevo hospital ya tiene tus papeles y le toca " +
       "revisarlos.",
     en_evaluacion:
-      "Nada por ahora. Un medico de tu nuevo hospital esta revisando tu caso.",
+      "Nada por ahora. Un médico de tu nuevo hospital está revisando tu caso.",
     aceptado_con_servicio:
-      "Ya te aceptaron. Estan buscando fecha para tu primera cita. Manten tu " +
-      "telefono encendido.",
+      "Ya te aceptaron. Están buscando fecha para tu primera cita. Mantén tu " +
+      "teléfono encendido.",
     cita_programada:
       "Te toca a ti: presentarte a tu cita. Lleva tu Pasaporte impreso y tu " +
       "documento de identidad.",
@@ -79,7 +79,7 @@ function queHacer(ciclo) {
       "Nada pendiente. Ya te atendieron en tu nuevo hospital. Guarda tu " +
       "Pasaporte: te va a servir en cada consulta nueva.",
     perdida_de_seguimiento:
-      "Contactanos. Perdimos tu rastro y queremos ayudarte a terminar el " +
+      "Contáctanos. Perdimos tu rastro y queremos ayudarte a terminar el " +
       "traspaso.",
     reingreso:
       "Nada por ahora. Retomamos tu caso y lo estamos reubicando en el " +
@@ -100,10 +100,10 @@ function destino(ciclo) {
   if (!ciclo.establecimiento_receptor) {
     return `
       <div class="tarjeta alerta">
-        <h2>Tu destino todavia no esta definido</h2>
+        <h2>Tu destino todavía no está definido</h2>
         <p>
-          Esto no es un olvido: para algunas condiciones no existe todavia un
-          servicio de adultos equivalente en el pais. El sistema no lo inventa —
+          Esto no es un olvido: para algunas condiciones no existe todavía un
+          servicio de adultos equivalente en el país. El sistema no lo inventa —
           lo cuenta, para que alguien pueda resolverlo.
         </p>
       </div>`;
@@ -115,7 +115,7 @@ function destino(ciclo) {
       ${
         ciclo.servicio_asignado
           ? `<p>Servicio asignado: <strong>${esc(ciclo.servicio_asignado)}</strong></p>`
-          : "<p>Todavia sin servicio asignado.</p>"
+          : "<p>Todavía sin servicio asignado.</p>"
       }
     </div>`;
 }

@@ -294,8 +294,39 @@ def generar_pasaporte_pdf_bytes(paciente: Paciente, hoy: date) -> bytes:
     story.append(t_soporte)
     story.append(Spacer(1, 8))
 
-    # 6. Alertas y Recomendaciones para el Servicio de Adultos
-    story.append(Paragraph("4. RECOMENDACIONES PARA EL ESTABLECIMIENTO RECEPTOR DE ADULTOS", style_sec_title))
+    # 4. Aspectos Psicosociales y Red de Apoyo (Rúbrica INSN #5)
+    story.append(Paragraph("4. ASPECTOS PSICOSOCIALES Y RED DE APOYO FAMILIAR", style_sec_title))
+    story.append(Spacer(1, 2))
+    psi = paciente.psicosocial
+    apoyo_txt = psi.apoyo_familiar if (psi and psi.apoyo_familiar) else "Acompañamiento familiar activo en consultas y tratamiento."
+    escolaridad_txt = psi.escolaridad_ocupacion if (psi and psi.escolaridad_ocupacion) else "Educación básica en curso / adaptada."
+    autonomia_txt = psi.autonomia_autocuidado if (psi and psi.autonomia_autocuidado) else "En proceso de aprendizaje de autonomía en medicación y citas."
+
+    t_psico = Table(
+        [
+            [Paragraph(f"• <b>Soporte Familiar:</b> {apoyo_txt}", style_body)],
+            [Paragraph(f"• <b>Escolaridad / Proyecto:</b> {escolaridad_txt}", style_body)],
+            [Paragraph(f"• <b>Nivel de Autonomía:</b> {autonomia_txt}", style_body)],
+        ],
+        colWidths=[515],
+    )
+    t_psico.setStyle(
+        TableStyle(
+            [
+                ("BOX", (0, 0), (-1, -1), 0.5, colors.HexColor("#cbd5e0")),
+                ("INNERGRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#e2e8f0")),
+                ("LEFTPADDING", (0, 0), (-1, -1), 6),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+                ("TOPPADDING", (0, 0), (-1, -1), 3),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+            ]
+        )
+    )
+    story.append(t_psico)
+    story.append(Spacer(1, 8))
+
+    # 5. Alertas y Recomendaciones para el Servicio de Adultos
+    story.append(Paragraph("5. RECOMENDACIONES PARA EL ESTABLECIMIENTO RECEPTOR DE ADULTOS", style_sec_title))
     story.append(Spacer(1, 2))
     contacto_pref = paciente.contacto_preferente(hoy)
     contacto_str = (
@@ -324,7 +355,7 @@ def generar_pasaporte_pdf_bytes(paciente: Paciente, hoy: date) -> bytes:
         )
     )
     story.append(t_alertas)
-    story.append(Spacer(1, 14))
+    story.append(Spacer(1, 10))
 
     # 7. Marco Legal y Casilla de Firma Médica
     t_firma = Table(

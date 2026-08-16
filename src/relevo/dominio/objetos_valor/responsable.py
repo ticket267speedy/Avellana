@@ -77,11 +77,11 @@ class Responsable(Enum):
 
 
 _ETIQUETAS: dict[Responsable, str] = {
-    Responsable.EQUIPO_INSN: "Equipo de transicion del INSN",
+    Responsable.EQUIPO_INSN: "Equipo de transición del INSN",
     Responsable.HOSPITAL_RECEPTOR: "Hospital receptor",
     Responsable.PACIENTE: "El paciente",
     Responsable.APODERADO: "El apoderado",
-    Responsable.NADIE: "Nadie — el ciclo termino bien",
+    Responsable.NADIE: "Nadie — el ciclo terminó bien",
 }
 
 

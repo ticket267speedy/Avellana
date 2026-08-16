@@ -247,3 +247,70 @@ class HistoriaTextoLibre:
         return "\n\n".join(
             f"[{seccion}]\n{texto}" for seccion, texto in self.secciones.items()
         )
+
+
+@dataclass(frozen=True, slots=True)
+class ChecklistPreparacionINSN:
+    """Checklist institucional de preparacion para la transicion (Rubrica INSN #3).
+
+    Evalua los seis items literales exigidos por el INSN San Borja:
+    1. Diagnostico
+    2. Tratamiento
+    3. Medicamentos
+    4. Senales de alerta
+    5. Documentos
+    6. Servicio de destino
+
+    Alimenta el factor x5 del IUT de forma compatible y complementaria con el TRAQ.
+    """
+
+    conoce_diagnostico: bool = False
+    conoce_tratamiento: bool = False
+    conoce_medicamentos: bool = False
+    conoce_senales_de_alerta: bool = False
+    conoce_documentos: bool = False
+    conoce_servicio_de_destino: bool = False
+    fecha_evaluacion: date | None = None
+
+    @property
+    def items_cumplidos(self) -> int:
+        return sum(
+            [
+                self.conoce_diagnostico,
+                self.conoce_tratamiento,
+                self.conoce_medicamentos,
+                self.conoce_senales_de_alerta,
+                self.conoce_documentos,
+                self.conoce_servicio_de_destino,
+            ]
+        )
+
+    @property
+    def total_items(self) -> int:
+        return 6
+
+    @property
+    def proporcion_lograda(self) -> float:
+        return self.items_cumplidos / 6.0
+
+    @property
+    def puntaje_traq_equivalente(self) -> float:
+        """Convierte los 6 items a la escala TRAQ 1.0 - 5.0."""
+        return 1.0 + self.proporcion_lograda * 4.0
+
+
+@dataclass(frozen=True, slots=True)
+class PerfilPsicosocial:
+    """Necesidades psicosociales y red de apoyo familiar (Rubrica INSN #5).
+
+    Documenta factores socioambientales determinantes para la continuidad de
+    cuidados al cumplir la mayoria de edad: apoyo familiar, escolaridad,
+    autonomia y situacion habitacional.
+    """
+
+    apoyo_familiar: str = ""
+    escolaridad_ocupacion: str = ""
+    autonomia_autocuidado: str = ""
+    vivienda_servicios: str = ""
+    observaciones: str = ""
+

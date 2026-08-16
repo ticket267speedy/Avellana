@@ -46,15 +46,15 @@ function selloEsqueleto(sello) {
     <div class="tarjeta esqueleto">
       <p class="sello-grande">${esc(sello)}</p>
       <p>
-        Esta leccion tiene su titulo, su objetivo y su estructura —aprender,
-        practicar, desafio, tarea de la vida real, retroalimentacion— pero el
-        contenido no esta escrito.
+        Esta lección tiene su título, su objetivo y su estructura —aprender,
+        practicar, desafío, tarea de la vida real, retroalimentación— pero el
+        contenido no está escrito.
       </p>
       <p>
         <strong>Y se dice en vez de rellenarlo.</strong> Escribir contenido
-        clinico sin la firma de un medico del INSN violaria la regla que
-        atraviesa este proyecto entero: ninguna salida clinica se emite sin
-        revision humana explicita.
+        clínico sin la firma de un médico del INSN violaría la regla que
+        atraviesa este proyecto entero: ninguna salida clínica se emite sin
+        revisión humana explícita.
       </p>
     </div>`;
 }
@@ -114,10 +114,10 @@ function fuentes(lista) {
 
   return `
     <section class="fuentes">
-      <h2>De donde sale cada cosa</h2>
+      <h2>De dónde sale cada cosa</h2>
       <p class="fuentes-nota">
-        Cada afirmacion con su norma. Sin esto, "tu madre ya no puede pedir tus
-        resultados" seria un rumor.
+        Cada afirmación con su norma. Sin esto, "tu madre ya no puede pedir tus
+        resultados" sería un rumor.
       </p>
       <ul>${filas}</ul>
     </section>`;

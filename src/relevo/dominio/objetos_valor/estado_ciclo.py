@@ -162,22 +162,22 @@ class EstadoCiclo(Enum):
 
 
 _ETIQUETAS: dict[EstadoCiclo, str] = {
-    EstadoCiclo.PREPARACION: "En preparacion",
+    EstadoCiclo.PREPARACION: "En preparación",
     EstadoCiclo.REFERENCIA_ENVIADA: "Referencia enviada",
-    EstadoCiclo.RECEPCION_CONFIRMADA: "Recepcion confirmada",
-    EstadoCiclo.EN_EVALUACION: "En evaluacion del receptor",
+    EstadoCiclo.RECEPCION_CONFIRMADA: "Recepción confirmada",
+    EstadoCiclo.EN_EVALUACION: "En evaluación del receptor",
     EstadoCiclo.ACEPTADO_CON_SERVICIO: "Aceptado con servicio asignado",
     EstadoCiclo.CITA_PROGRAMADA: "Cita programada",
-    EstadoCiclo.PRIMERA_ATENCION_CONFIRMADA: "Primera atencion confirmada",
-    EstadoCiclo.PERDIDA_DE_SEGUIMIENTO: "Perdida de seguimiento",
+    EstadoCiclo.PRIMERA_ATENCION_CONFIRMADA: "Primera atención confirmada",
+    EstadoCiclo.PERDIDA_DE_SEGUIMIENTO: "Pérdida de seguimiento",
     EstadoCiclo.REINGRESO: "Reingreso al ciclo",
 }
 
 _ETIQUETAS_LLANAS: dict[EstadoCiclo, str] = {
-    EstadoCiclo.PREPARACION: "Tu equipo del INSN esta preparando tu traspaso",
+    EstadoCiclo.PREPARACION: "Tu equipo del INSN está preparando tu traspaso",
     EstadoCiclo.REFERENCIA_ENVIADA: "Tus papeles ya salieron hacia tu nuevo hospital",
-    EstadoCiclo.RECEPCION_CONFIRMADA: "Tu nuevo hospital confirmo que recibio tus papeles",
-    EstadoCiclo.EN_EVALUACION: "Tu nuevo hospital esta revisando tu informacion",
+    EstadoCiclo.RECEPCION_CONFIRMADA: "Tu nuevo hospital confirmó que recibió tus papeles",
+    EstadoCiclo.EN_EVALUACION: "Tu nuevo hospital está revisando tu información",
     EstadoCiclo.ACEPTADO_CON_SERVICIO: "Te aceptaron y ya tienes servicio asignado",
     EstadoCiclo.CITA_PROGRAMADA: "Ya tienes fecha de cita",
     EstadoCiclo.PRIMERA_ATENCION_CONFIRMADA: "Ya te atendieron en tu nuevo hospital",

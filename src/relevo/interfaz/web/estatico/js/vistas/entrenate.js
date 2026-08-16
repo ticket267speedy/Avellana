@@ -42,13 +42,13 @@ export async function render() {
         ${
           datos.siguiente_leccion
             ? `<button class="boton" data-leccion="${datos.siguiente_leccion}">
-                 Empezar la leccion ${datos.siguiente_leccion}</button>`
+                 Empezar la lección ${datos.siguiente_leccion}</button>`
             : ""
         }
       </div>
 
       <p class="invariante">
-        Ninguna leccion condiciona tu traspaso. Aprender es para ti, no un
+        Ninguna lección condiciona tu traspaso. Aprender es para ti, no un
         requisito para que te deriven.
       </p>
 
@@ -67,7 +67,7 @@ function tarjetaHabilidad(habilidad, lecciones) {
 
   return `
     <article class="habilidad ${clase}">
-      <p class="habilidad-numero">Leccion ${habilidad.numero}</p>
+      <p class="habilidad-numero">Lección ${habilidad.numero}</p>
       <h2>${esc(habilidad.titulo)}</h2>
       <p class="habilidad-estado">${esc(habilidad.estado_etiqueta)}</p>
       ${sello}

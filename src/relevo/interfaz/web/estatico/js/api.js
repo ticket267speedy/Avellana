@@ -42,6 +42,13 @@ function enviar(ruta, datos) {
   return pedir(ruta, { method: "POST", body: JSON.stringify(datos || {}) });
 }
 
+// ── Autenticacion (§8.3) ───────────────────────────────────────────────────
+
+export const login = (usuario, password) =>
+  enviar("/api/auth/login", { usuario, password });
+export const logout = () => enviar("/api/auth/logout");
+export const consultarSesion = () => pedir("/api/auth/sesion");
+
 // ── Radar y pacientes ───────────────────────────────────────────────────────
 
 export const listarPacientes = (hoy) => pedir(`/api/pacientes${consulta({ hoy })}`);
@@ -52,6 +59,7 @@ export const avanzarCiclo = (id, datos) =>
   enviar(`/api/pacientes/${id}/ciclo/avanzar`, datos);
 
 export const urlPasaporte = (id) => `/api/pacientes/${id}/pasaporte`;
+export const urlFHIR = (id) => `/api/pacientes/${id}/fhir`;
 
 // ── Entrenate ───────────────────────────────────────────────────────────────
 
@@ -98,6 +106,39 @@ export const reiniciarDemo = () => enviar("/api/demo/reiniciar");
 export const avanzarEtapa = (pacienteId) =>
   enviar("/api/demo/avanzar-etapa", { paciente_id: pacienteId });
 export const cambiarRolServidor = (rol) => enviar("/api/demo/cambiar-rol", { rol });
+
+export const estadoDigitalizacion = () => pedir("/api/digitalizacion/estado");
+export const listarEjemplosDigitalizacion = () => pedir("/api/digitalizacion/ejemplos");
+export const imagenEjemploDigitalizacion = (id) => BASE + `/data/corpus/imagenes/${id}.jpg`;
+
+export async function cargarBlobDesdeRuta(ruta) {
+  const respuesta = await fetch(BASE + ruta, { headers: cabeceras() });
+  if (!respuesta.ok) {
+    throw new Error(`No se pudo cargar la ruta ${ruta}.`);
+  }
+  return respuesta.blob();
+}
+
+export async function leerDocumento(archivo) {
+  const formData = new FormData();
+  formData.append("archivo", archivo);
+
+  const respuesta = await fetch(BASE + "/api/digitalizacion/leer", {
+    method: "POST",
+    body: formData,
+    headers: { "X-Relevo-Rol": rolActual() || "profesional_insn" },
+  });
+
+  const cuerpo = await respuesta.json().catch(() => null);
+  if (!respuesta.ok) {
+    const detalle = cuerpo && cuerpo.detail ? cuerpo.detail : respuesta.statusText;
+    const error = new Error(detalle);
+    error.estado = respuesta.status;
+    throw error;
+  }
+
+  return cuerpo;
+}
 
 function consulta(parametros) {
   const partes = Object.entries(parametros)

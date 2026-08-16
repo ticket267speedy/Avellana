@@ -50,6 +50,11 @@ from relevo.dominio.objetos_valor.telefono import Telefono
 from relevo.dominio.servicios.calculadora_iut import CalculadoraIUT
 from relevo.dominio.servicios.clasificador_cohorte import ClasificadorCohorte
 from relevo.dominio.entidades.paciente import Paciente
+from relevo.dominio.entidades.pasaporte import (
+    Firma,
+    Pasaporte,
+    VersionPasaporte,
+)
 from relevo.dominio.servicios.maquina_ciclo import (
     EvaluacionPlazo,
     MaquinaCiclo,
@@ -67,6 +72,9 @@ from relevo.infraestructura.configuracion.cargador_yaml import (
     cargar_politica_plazos,
 )
 from relevo.infraestructura.fuentes.cohorte_demo import construir_cohorte_demo
+from relevo.infraestructura.interoperabilidad.fhir_corepe import (
+    ExportadorFHIRCorePE,
+)
 from relevo.infraestructura.notificacion.canal_archivo import (
     CanalCorreoArchivo,
     CanalWhatsAppEnlace,
@@ -266,6 +274,23 @@ class Contenedor:
     def emitir_pasaporte(self, paciente: Paciente, hoy: date) -> bytes:
         """El Pasaporte de Salud 18+ en PDF, listo para imprimir y firmar."""
         return generar_pasaporte_pdf_bytes(paciente, hoy)
+
+    def emitir_fhir(self, paciente: Paciente, hoy: date) -> str:
+        """Exporta el Bundle HL7 FHIR CorePE R4 (MINSA) / IPS."""
+        exportador = ExportadorFHIRCorePE()
+        pasaporte = Pasaporte(
+            paciente_id=paciente.id,
+            version=VersionPasaporte.para_edad(paciente.edad(hoy)) or VersionPasaporte.V3_17,
+            fecha_emision=hoy,
+        )
+        pasaporte.firmar(
+            Firma(
+                nombre_medico="Dra. Carmen Valdez",
+                colegiatura="CMP 45120",
+                fecha=hoy,
+            )
+        )
+        return exportador.exportar_paciente(paciente, pasaporte)
 
     def buscar_establecimiento(
         self, consulta: str, limite: int = 8

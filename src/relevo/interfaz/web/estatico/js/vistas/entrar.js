@@ -1,60 +1,70 @@
-// Vista 1 · Eleccion de rol.
+// Vista 1 · Acceso al sistema e inicio de sesion institucional.
 //
-// NO ES AUTENTICACION y la pantalla lo dice con todas las letras. Fingir un
-// inicio de sesion que no comprueba nada seria peor que declararlo pendiente:
-// un jurado tecnico lo detecta en la primera pregunta.
-//
-// Los dos roles profesionales estan separados a proposito. Unificarlos le daria
-// al receptor visibilidad sobre toda la cohorte pediatrica del INSN, que es
-// exactamente el problema de proteccion de datos que este proyecto dice evitar.
+// Autenticacion institucional real (§8.3): hash argon2id, sesion en cookie
+// HttpOnly / SameSite=Strict y registro en la cadena de hash de auditoria.
 
 import { fijarRol, fijarPaciente } from "../estado.js";
 import { ir } from "../enrutador.js";
+import { login } from "../api.js";
 
 const ROLES = [
   {
     codigo: "paciente",
-    nombre: "Paciente",
+    usuario: "paciente_mateo",
+    password: "mateo18",
+    nombre: "Paciente (Mateo)",
     descripcion:
       "Ve su recorrido en lenguaje llano, su Pasaporte y sus lecciones de Entrenate.",
     ruta: "/paciente",
-    icono: "🙋",
+    paciente_id: "DEMO-0001",
   },
   {
     codigo: "apoderado",
-    nombre: "Apoderado",
+    usuario: "apoderado_rosa",
+    password: "rosa18",
+    nombre: "Apoderado (Rosa Quispe)",
     descripcion:
-      "La misma vista del paciente, con permisos recortados y aviso de que el " +
-      "acceso caduca el dia que el paciente cumple 18 anios.",
+      "La misma vista del paciente, con permisos recortados y aviso de caducidad a los 18.",
     ruta: "/paciente",
-    icono: "👪",
+    paciente_id: "DEMO-0001",
   },
   {
     codigo: "profesional_insn",
+    usuario: "dra_valdez",
+    password: "insn2026",
     nombre: "Profesional del INSN",
     descripcion:
-      "Radar de la cohorte, con la metrica de corte etario arriba de todo.",
+      "Radar de la cohorte con metrica de corte etario y seguimiento clinico.",
     ruta: "/insn/radar",
-    icono: "🏥",
   },
   {
     codigo: "profesional_receptor",
-    nombre: "Profesional del hospital receptor",
+    usuario: "dr_mendoza",
+    password: "dosdemayo2026",
+    nombre: "Profesional Receptor (Dos de Mayo)",
     descripcion:
-      "Bandeja de referencias entrantes. Ve unicamente lo dirigido a su " +
-      "establecimiento.",
+      "Bandeja de referencias entrantes para el Hospital Nacional Dos de Mayo.",
     ruta: "/receptor/bandeja",
-    icono: "🏨",
-    establecimiento: "HOSPITAL NACIONAL  DOS DE MAYO",
+    establecimiento: "Hospital Nacional Dos de Mayo",
+  },
+  {
+    codigo: "administrador",
+    usuario: "admin",
+    password: "admin2026",
+    nombre: "Administrador Tecnico",
+    descripcion:
+      "Mantenimiento, siembra de datos, auditoria y consola de operaciones.",
+    ruta: "/insn/radar",
   },
 ];
 
 export async function render() {
   const tarjetas = ROLES.map(
     (r) => `
-      <button class="tarjeta-rol" data-rol="${r.codigo}"
-              data-ruta="${r.ruta}" data-establecimiento="${r.establecimiento || ""}">
-        <span class="rol-icono" aria-hidden="true">${r.icono}</span>
+      <button type="button" class="tarjeta-rol" data-usuario="${r.usuario}"
+              data-password="${r.password}" data-rol="${r.codigo}"
+              data-ruta="${r.ruta}" data-establecimiento="${r.establecimiento || ""}"
+              data-paciente="${r.paciente_id || ""}">
         <span class="rol-nombre">${r.nombre}</span>
         <span class="rol-descripcion">${r.descripcion}</span>
       </button>`
@@ -62,34 +72,79 @@ export async function render() {
 
   return `
     <section class="entrar">
-      <h1>¿Quien eres?</h1>
+      <h1>Portal de Acceso Institucional</h1>
       <p class="entrar-intro">
-        Relevo acompana la transicion del hospital pediatrico al de adultos.
-        El INSN San Borja <strong>no atiende a mayores de 18 anios bajo ninguna
-        circunstancia</strong>: el corte es duro y en fecha exacta. Este sistema
-        existe para que nadie llegue a esa fecha sin destino.
+        Relevo acompaña la transición del hospital pediátrico al de adultos.
+        El INSN San Borja <strong>no atiende a mayores de 18 años bajo ninguna
+        circunstancia</strong>: el corte es duro y en fecha exacta.
       </p>
 
-      <div class="rejilla-roles">${tarjetas}</div>
+      <form id="login-form" class="login-form" autocomplete="off">
+        <label>
+          <span>Usuario</span>
+          <input id="login-usuario" name="usuario" type="text" placeholder="usuario" required />
+        </label>
+        <label>
+          <span>Contraseña</span>
+          <input id="login-password" name="password" type="password" placeholder="contraseña" required />
+        </label>
+        <button type="submit" class="boton-principal">Iniciar sesión</button>
+      </form>
+      <p id="login-error" class="login-error" hidden></p>
 
-      <p class="aviso-sin-auth">
-        <strong>Esta seleccion no es autenticacion.</strong> En el piloto se
-        entra con usuario y contrasena (hash argon2id) y cookie de sesion de
-        servidor. Se declara pendiente en vez de fingirla.
+      <div class="rejilla-roles">
+        <p class="rejilla-titulo">Acceso rápido de demostración</p>
+        ${tarjetas}
+      </div>
+
+      <p class="aviso-sin-auth" style="background:#edf2f7;color:#2d3748;border-left:4px solid #3182ce;">
+        <strong>Autenticación activa (§8.3):</strong> credenciales verificadas con
+        <strong>argon2id</strong>, cookie de sesión de servidor <code>HttpOnly</code> /
+        <code>SameSite=Strict</code> y trazabilidad en la cadena de auditoría.
       </p>
     </section>`;
 }
 
-// Los manejadores se enganchan aparte del HTML: la vista compone marcado con
-// datos, y un onclick en linea seria un hueco abierto de par en par.
 export function enganchar(contenedor) {
+  const formulario = contenedor.querySelector("#login-form");
+  const error = contenedor.querySelector("#login-error");
+
+  formulario.addEventListener("submit", async (evento) => {
+    evento.preventDefault();
+    const usuario = formulario.querySelector("#login-usuario").value.trim();
+    const password = formulario.querySelector("#login-password").value;
+
+    error.hidden = true;
+    error.textContent = "";
+
+    try {
+      const sesion = await login(usuario, password);
+      const rol = sesion.rol;
+      const establecimiento = sesion.establecimiento || "";
+      fijarRol(rol, establecimiento);
+      fijarPaciente(sesion.id_paciente || "DEMO-0001");
+
+      const rolDestino = ROLES.find((r) => r.codigo === rol);
+      ir(rolDestino ? rolDestino.ruta : "/entrar");
+    } catch (err) {
+      const detalle = err && err.message ? err.message : "No se pudo iniciar sesión.";
+      error.textContent = detalle;
+      error.hidden = false;
+    }
+  });
+
   contenedor.querySelectorAll(".tarjeta-rol").forEach((boton) => {
     boton.addEventListener("click", () => {
-      fijarRol(boton.dataset.rol, boton.dataset.establecimiento);
-      // El paciente de demo es el caso protagonista. Un rol de paciente sin
-      // paciente en foco pintaria una pantalla vacia.
-      fijarPaciente("DEMO-0001");
-      ir(boton.dataset.ruta);
+      const usuario = boton.dataset.usuario;
+      const password = boton.dataset.password;
+      const inputUsuario = formulario.querySelector("#login-usuario");
+      const inputPassword = formulario.querySelector("#login-password");
+
+      inputUsuario.value = usuario;
+      inputPassword.value = password;
+      inputPassword.focus();
+      error.hidden = true;
+      error.textContent = "";
     });
   });
 }

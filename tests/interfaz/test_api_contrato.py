@@ -30,6 +30,35 @@ def test_salud_responde_sin_tocar_la_base(cliente: TestClient) -> None:
 # ═══════════════════════════════════════════════════════════════════════════
 
 
+def test_el_rol_explicitado_en_cabecera_tiene_preferencia_sobre_cookie(
+    cliente: TestClient, insn: dict[str, str]
+) -> None:
+    """La demo cambia de rol en memoria y debe poder anular una cookie vieja."""
+    from relevo.interfaz.api.autenticacion import GestorAutenticacion, NOMBRE_COOKIE_SESION
+    from relevo.interfaz.api.roles import Rol
+
+    gestor = GestorAutenticacion()
+    sesion_receptor = gestor.crear_sesion_para_rol(Rol.PROFESIONAL_RECEPTOR)
+    cliente.cookies.set(NOMBRE_COOKIE_SESION, sesion_receptor.token)
+
+    respuesta = cliente.get("/api/pacientes", headers=insn)
+    assert respuesta.status_code == 200
+    assert respuesta.json()
+
+
+def test_cambiar_de_rol_guarda_sesion_en_cookie(
+    cliente: TestClient,
+) -> None:
+    """El cambio de rol debe persistir en la sesion del navegador."""
+    respuesta = cliente.post(
+        "/api/demo/cambiar-rol",
+        json={"rol": "paciente"},
+    )
+    assert respuesta.status_code == 200
+    set_cookie = respuesta.headers.get("set-cookie", "")
+    assert "relevo_sesion=" in set_cookie
+
+
 def test_el_radar_devuelve_la_cohorte_ordenada_por_iut(
     cliente: TestClient, insn: dict[str, str]
 ) -> None:
@@ -181,6 +210,73 @@ def test_solicitar_informacion_sin_decir_que_falta_es_422(
     assert respuesta.status_code == 422
 
 
+def test_la_digitalizacion_ocr_acepta_un_documento_subido(
+    cliente: TestClient, insn: dict[str, str]
+) -> None:
+    """La diferencia del proyecto es que el OCR ya existe y puede usarse desde la
+    API del producto sin abrir otra app de consola."""
+
+    class FalsoSubidor:
+        def leer(self, nombre: str, imagen: bytes):
+            class Campo:
+                nombre = "dni"
+                valor = "72319111"
+                crudo = "DNI: 72319111"
+                motivo = ""
+
+            class Documento:
+                documento_id = nombre
+                texto = "DNI: 72319111"
+                campos = (Campo(),)
+                lector = "falso-ocr"
+                desde_cache = False
+
+                @property
+                def valores(self):
+                    return {"dni": "72319111"}
+
+                @property
+                def requieren_revision(self):
+                    return ()
+
+                @property
+                def tasa_captura(self):
+                    return 1.0
+
+            return type(
+                "Lectura",
+                (),
+                {
+                    "documento": Documento(),
+                    "origen": "documento subido y leido en vivo",
+                    "verdad": {},
+                },
+            )()
+
+    from relevo.interfaz.api.dependencias import obtener_contenedor
+
+    app = cliente.app
+    app.dependency_overrides[obtener_contenedor] = lambda: type(
+        "ContenedorFalso",
+        (),
+        {"revisar_subida": FalsoSubidor()},
+    )()
+
+    respuesta = cliente.post(
+        "/api/digitalizacion/leer",
+        headers=insn,
+        files={"archivo": ("documento.jpg", b"imagen", "image/jpeg")},
+    )
+
+    assert respuesta.status_code == 200
+    cuerpo = respuesta.json()
+    assert cuerpo["documento_id"] == "documento.jpg"
+    assert cuerpo["lector"] == "falso-ocr"
+    assert cuerpo["campos"][0]["valor"] == "72319111"
+
+    app.dependency_overrides.clear()
+
+
 def test_solicitar_informacion_devuelve_el_turno_sin_cambiar_de_estado(
     cliente: TestClient, receptor: dict[str, str]
 ) -> None:
@@ -293,7 +389,7 @@ def test_seis_lecciones_van_selladas_como_pendientes_de_validacion(
     assert completas[0]["numero"] == 6
     assert len(esqueletos) == 6
     for le in esqueletos:
-        assert le["sello"] == "Contenido pendiente de validacion clinica del INSN"
+        assert le["sello"] == "Contenido pendiente de validación clínica del INSN"
 
 
 def test_la_leccion_completa_cita_sus_fuentes(
@@ -363,7 +459,7 @@ def test_declarar_medicacion_abre_un_caso_para_el_insn(
     assert respuesta.status_code == 200
     datos = respuesta.json()
     assert datos["requiere_revision"] is True
-    assert datos["responsable"] == "Equipo de transicion del INSN"
+    assert datos["responsable"] == "Equipo de transición del INSN"
 
     tipos = {d["tipo"] for d in datos["discrepancias"]}
     assert "dosis_distinta" in tipos

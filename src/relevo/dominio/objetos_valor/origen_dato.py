@@ -77,7 +77,7 @@ _ETIQUETAS: dict[OrigenDato, str] = {
 
 _ETIQUETAS_CORTAS: dict[OrigenDato, str] = {
     OrigenDato.VERIFICADO_INSN: "INSN",
-    OrigenDato.INFORMADO_POR_PACIENTE: "lo dijiste tu",
+    OrigenDato.INFORMADO_POR_PACIENTE: "lo dijiste tú",
     OrigenDato.PENDIENTE_DE_COTEJO: "sin cotejar",
 }
 
@@ -119,7 +119,7 @@ class TipoDiscrepancia(Enum):
     def etiqueta(self) -> str:
         return {
             TipoDiscrepancia.FALTA_EN_PASAPORTE: "Falta en el Pasaporte",
-            TipoDiscrepancia.FALTA_EN_DECLARACION: "No lo menciono el paciente",
+            TipoDiscrepancia.FALTA_EN_DECLARACION: "No lo mencionó el paciente",
             TipoDiscrepancia.DOSIS_DISTINTA: "La dosis no coincide",
             TipoDiscrepancia.FRECUENCIA_DISTINTA: "La frecuencia no coincide",
         }[self]

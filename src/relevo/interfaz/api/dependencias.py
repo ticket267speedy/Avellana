@@ -20,6 +20,11 @@ from fastapi import Depends, HTTPException, Query, Request, status
 
 from relevo.dominio.entidades.ciclo_transicion import CicloTransicion
 from relevo.dominio.entidades.paciente import Paciente
+from relevo.interfaz.api.autenticacion import (
+    NOMBRE_COOKIE_SESION,
+    GestorAutenticacion,
+    Sesion,
+)
 from relevo.interfaz.api.roles import Rol
 from relevo.interfaz.arranque import Contenedor, construir
 
@@ -29,11 +34,16 @@ from relevo.interfaz.arranque import Contenedor, construir
 # cada dia, los plazos vencidos del ensayo dejarian de coincidir.
 FECHA_DEMO = date(2026, 8, 16)
 
-# Cabecera con la que la demo declara su rol mientras no hay sesion de
-# servidor. Se sustituye por la cookie de sesion en C6; hasta entonces la
-# interfaz manda el rol elegido en la pantalla de entrada.
+# Cabeceras de respaldo para pruebas automatizadas y transicion de demo.
 CABECERA_ROL = "X-Relevo-Rol"
 CABECERA_ESTABLECIMIENTO = "X-Relevo-Establecimiento"
+
+_GESTOR_AUTH = GestorAutenticacion()
+
+
+def obtener_gestor_auth() -> GestorAutenticacion:
+    """El gestor de sesiones argon2id del servidor."""
+    return _GESTOR_AUTH
 
 
 @lru_cache(maxsize=1)
@@ -63,21 +73,50 @@ def obtener_hoy(
     return hoy or FECHA_DEMO
 
 
-def obtener_rol(request: Request) -> Rol:
-    """El rol de quien pide. Sin sesion todavia: ver C6.
+def obtener_sesion_actual(request: Request) -> Sesion | None:
+    """Obtiene la sesion activa desde la cookie o cabecera de respaldo."""
+    token = request.cookies.get(NOMBRE_COOKIE_SESION) or ""
+    if token:
+        sesion = _GESTOR_AUTH.validar_token(token)
+        if sesion is not None:
+            return sesion
 
-    Por defecto PACIENTE y no ADMINISTRADOR: si la cabecera falta por un error,
-    el fallo tiene que dejar ver MENOS, nunca mas.
-    """
+    # Respaldo por cabecera para tests de contrato existentes
     crudo = (request.headers.get(CABECERA_ROL) or "").strip()
+    if crudo:
+        try:
+            rol = Rol(crudo)
+            est = (request.headers.get(CABECERA_ESTABLECIMIENTO) or "").strip()
+            return _GESTOR_AUTH.crear_sesion_para_rol(rol=rol, establecimiento=est)
+        except ValueError:
+            pass
+    return None
+
+
+def obtener_rol(request: Request) -> Rol:
+    """El rol de quien pide, con prioridad explicita a la cabecera de demo."""
+    crudo = (request.headers.get(CABECERA_ROL) or "").strip()
+    if crudo:
+        try:
+            return Rol(crudo)
+        except ValueError:
+            pass
+
+    sesion = obtener_sesion_actual(request)
+    if sesion is not None:
+        return sesion.rol
+
     try:
-        return Rol(crudo)
+        return Rol(crudo) if crudo else Rol.PACIENTE
     except ValueError:
         return Rol.PACIENTE
 
 
 def obtener_establecimiento(request: Request) -> str:
     """El establecimiento del profesional receptor, para el aislamiento."""
+    sesion = obtener_sesion_actual(request)
+    if sesion is not None and sesion.establecimiento:
+        return sesion.establecimiento
     return (request.headers.get(CABECERA_ESTABLECIMIENTO) or "").strip()
 
 
@@ -85,6 +124,7 @@ ContenedorDep = Annotated[Contenedor, Depends(obtener_contenedor)]
 HoyDep = Annotated[date, Depends(obtener_hoy)]
 RolDep = Annotated[Rol, Depends(obtener_rol)]
 EstablecimientoDep = Annotated[str, Depends(obtener_establecimiento)]
+SesionDep = Annotated[Sesion | None, Depends(obtener_sesion_actual)]
 
 
 # ═══════════════════════════════════════════════════════════════════════════
