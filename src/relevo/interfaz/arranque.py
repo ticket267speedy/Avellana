@@ -33,7 +33,10 @@ from relevo.aplicacion.digitalizar_documento import (
 )
 from relevo.aplicacion.evaluar_corte_etario import EvaluarCorteEtario
 from relevo.aplicacion.gestionar_acceso_apoderado import GestionarAccesoApoderado
-from relevo.aplicacion.priorizar_cohorte import PriorizarCohorte
+from relevo.aplicacion.priorizar_cohorte import (
+    PriorizarCohorte,
+    ResultadoPriorizacion,
+)
 from relevo.aplicacion.registrar_reingreso import RegistrarReingreso
 from relevo.aplicacion.revisar_corpus import RevisarCorpus, RevisarSubida
 from relevo.dominio.entidades.ciclo_transicion import CicloTransicion
@@ -44,9 +47,14 @@ from relevo.dominio.objetos_valor.habilidad import Habilidad
 from relevo.dominio.servicios.calculadora_iut import CalculadoraIUT
 from relevo.dominio.servicios.clasificador_cohorte import ClasificadorCohorte
 from relevo.dominio.entidades.paciente import Paciente
-from relevo.dominio.servicios.maquina_ciclo import MaquinaCiclo, PoliticaPlazos
+from relevo.dominio.servicios.maquina_ciclo import (
+    EvaluacionPlazo,
+    MaquinaCiclo,
+    PoliticaPlazos,
+)
 from relevo.infraestructura.configuracion.cargador_destinos import (
     cargar_directorio,
+    resumen_del_directorio,
 )
 from relevo.infraestructura.configuracion.cargador_lecciones import (
     cargar_lecciones,
@@ -253,6 +261,38 @@ class Contenedor:
             calculadora=CalculadoraIUT(cargar_parametros_iut()),
             clasificador=ClasificadorCohorte(),
         )
+
+    def radar(self, hoy: date) -> ResultadoPriorizacion:
+        """La cohorte PERSISTIDA, ordenada por IUT y con su desglose.
+
+        Distinto de `priorizar`, que trabaja sobre un padron sintetico generado
+        al vuelo para la consola tecnica. Este lee lo que hay en la base, que
+        es lo que ve el radar del producto.
+
+        Vive aqui y no en el router de la API porque construir una
+        `CalculadoraIUT` desde una pantalla es hacer de capa de aplicacion sin
+        serlo: la pantalla pasaria a saber COMO se prioriza en vez de QUE
+        pedir. `tests/test_arquitectura.py` lo vigila.
+        """
+        return PriorizarCohorte(
+            repositorio=RepositorioPacientesMemoria(list(self.pacientes())),
+            calculadora=CalculadoraIUT(cargar_parametros_iut()),
+            clasificador=ClasificadorCohorte(),
+        ).ejecutar(hoy)
+
+    def resumen_directorio(self) -> str:
+        """Una linea honesta sobre el estado del directorio de destinos.
+
+        Se muestra al lado de la cifra de cobertura. Sin ella, un "100 % sin
+        destino" se lee como un fallo del software en vez de como el hallazgo
+        del sistema de salud que es.
+        """
+        return resumen_del_directorio(self.directorio_destinos)
+
+    def evaluar_plazo(self, ciclo: CicloTransicion, hoy: date) -> EvaluacionPlazo:
+        """Como va este ciclo de plazo. Misma razon que `radar`: la pantalla no
+        instancia servicios de dominio."""
+        return MaquinaCiclo(self.politica_plazos).evaluar(ciclo, hoy)
 
     # ── Lectura de lo persistido ─────────────────────────────────────────────
 
