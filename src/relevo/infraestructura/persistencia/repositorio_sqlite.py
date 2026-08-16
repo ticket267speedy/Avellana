@@ -38,7 +38,10 @@ from datetime import date, datetime
 from pathlib import Path
 from typing import Any, Protocol
 
-ESQUEMA_VERSION = 1
+# v1 -> v2: nueve estados del ciclo, y tres agregados nuevos —progreso de
+# aprendizaje, conciliacion de medicacion y acceso del apoderado. La migracion
+# de los estados persistidos vive en `migraciones.py`. Nada se borra.
+ESQUEMA_VERSION = 2
 
 _ESQUEMA = """
 PRAGMA journal_mode = WAL;
@@ -107,6 +110,45 @@ CREATE TABLE IF NOT EXISTS semilla (
     clave  TEXT PRIMARY KEY,
     valor  TEXT NOT NULL
 );
+
+-- ── v2 ──────────────────────────────────────────────────────────────────────
+
+-- El recorrido Entrenate. Va en tabla propia y no dentro del documento del
+-- paciente porque lo alimenta el PACIENTE, no el personal de salud: mezclarlo
+-- con el expediente clinico invitaria a que alguien del INSN lo rellenara
+-- "para que quede completo", y ahi el dato pierde todo su valor.
+CREATE TABLE IF NOT EXISTS progreso_aprendizaje (
+    paciente_id  TEXT PRIMARY KEY REFERENCES paciente(id) ON DELETE CASCADE,
+    logradas     INTEGER NOT NULL DEFAULT 0,
+    documento    TEXT NOT NULL,
+    actualizado  TEXT NOT NULL
+);
+
+-- Casos de conciliacion de medicacion. `abierto` es columna propia porque es
+-- la unica consulta que se hace: la cola de trabajo del equipo del INSN.
+CREATE TABLE IF NOT EXISTS conciliacion (
+    id             TEXT PRIMARY KEY,
+    paciente_id    TEXT NOT NULL REFERENCES paciente(id) ON DELETE CASCADE,
+    abierto        INTEGER NOT NULL DEFAULT 1,
+    discrepancias  INTEGER NOT NULL DEFAULT 0,
+    documento      TEXT NOT NULL,
+    creado         TEXT NOT NULL,
+    actualizado    TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS ix_conciliacion_abierta ON conciliacion(abierto);
+
+-- Acceso del apoderado. NO hay columna `tiene_acceso`: la base legal se
+-- calcula en cada consulta a partir de la fecha. Un booleano persistido
+-- seguiria valiendo 1 el dia despues del cumpleanos 18, que es exactamente el
+-- fallo que el modulo de dominio existe para hacer imposible.
+CREATE TABLE IF NOT EXISTS acceso_apoderado (
+    id           TEXT PRIMARY KEY,
+    paciente_id  TEXT NOT NULL REFERENCES paciente(id) ON DELETE CASCADE,
+    fecha_corte  TEXT NOT NULL,
+    documento    TEXT NOT NULL,
+    actualizado  TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS ix_acceso_paciente ON acceso_apoderado(paciente_id);
 """
 
 
@@ -192,7 +234,14 @@ class BaseDatos:
 
         En demo se borra todo, para que cada corrida arranque igual.
         """
-        tablas = ["ciclo", "paciente", "semilla"]
+        tablas = [
+            "conciliacion",
+            "acceso_apoderado",
+            "progreso_aprendizaje",
+            "ciclo",
+            "paciente",
+            "semilla",
+        ]
         if not conservar_auditoria:
             tablas.append("auditoria")
         with self.conectar() as cx:
@@ -329,7 +378,14 @@ class RepositorioCiclosSQLite:
                     actualizado  = excluded.actualizado
                 """,
                 (
-                    ciclo.id,
+                    # Un ciclo no tiene identificador propio: hay uno por
+                    # paciente y el paciente ya lo identifica. Se admite un
+                    # `id` explicito en los indices para el dia que un paciente
+                    # tenga dos ciclos —un reingreso hacia otro destino—, pero
+                    # mientras no lo haya, inventar una clave sinteticaria una
+                    # entidad que no existe.
+                    ix.get("id", getattr(ciclo, "id", None))
+                    or getattr(ciclo, "paciente_id", ""),
                     ix.get("paciente_id", getattr(ciclo, "paciente_id", "")),
                     str(ix.get("estado", "")),
                     str(ix.get("fecha_estado", "")),
@@ -357,4 +413,68 @@ class RepositorioCiclosSQLite:
     def todos(self) -> tuple[Any, ...]:
         with self.bd.conectar() as cx:
             filas = cx.execute("SELECT documento FROM ciclo ORDER BY id").fetchall()
+        return tuple(self.desde_documento(json.loads(f["documento"])) for f in filas)
+
+
+@dataclass
+class RepositorioDocumentos:
+    """Almacen generico de agregados por paciente, sobre una tabla cualquiera.
+
+    Lo usan los tres agregados que llegaron con la fusion —progreso de
+    aprendizaje, conciliacion y acceso del apoderado— porque los tres tienen la
+    misma forma de acceso: guardar por clave, leer por paciente. Escribir tres
+    repositorios identicos habria sido triplicar el mismo SQL para no ganar
+    nada.
+
+    `columnas_extra` recibe las columnas indexadas de cada tabla, que son las
+    unicas que difieren. Igual que en los otros repositorios: solo se sube a
+    columna lo que de verdad se consulta.
+    """
+
+    bd: BaseDatos
+    tabla: str
+    a_documento: Any
+    desde_documento: Any
+    columna_clave: str = "id"
+
+    def guardar(
+        self, clave: str, agregado: Any, columnas_extra: dict[str, Any] | None = None
+    ) -> None:
+        extra = columnas_extra or {}
+        doc = self.a_documento(agregado)
+        ahora = _ahora()
+        campos = [self.columna_clave, *extra.keys(), "documento", "actualizado"]
+        valores = [clave, *extra.values(), _json(doc), ahora]
+        marcas = ",".join("?" for _ in campos)
+        actualizaciones = ",".join(
+            f"{c} = excluded.{c}" for c in campos if c != self.columna_clave
+        )
+        with self.bd.conectar() as cx:
+            cx.execute(
+                f"INSERT INTO {self.tabla} ({','.join(campos)}) VALUES ({marcas}) "
+                f"ON CONFLICT({self.columna_clave}) DO UPDATE SET {actualizaciones}",
+                tuple(valores),
+            )
+
+    def obtener(self, clave: str) -> Any | None:
+        with self.bd.conectar() as cx:
+            fila = cx.execute(
+                f"SELECT documento FROM {self.tabla} WHERE {self.columna_clave} = ?",
+                (clave,),
+            ).fetchone()
+        return self.desde_documento(json.loads(fila["documento"])) if fila else None
+
+    def de_paciente(self, paciente_id: str) -> tuple[Any, ...]:
+        with self.bd.conectar() as cx:
+            filas = cx.execute(
+                f"SELECT documento FROM {self.tabla} WHERE paciente_id = ?",
+                (paciente_id,),
+            ).fetchall()
+        return tuple(self.desde_documento(json.loads(f["documento"])) for f in filas)
+
+    def todos(self) -> tuple[Any, ...]:
+        with self.bd.conectar() as cx:
+            filas = cx.execute(
+                f"SELECT documento FROM {self.tabla} ORDER BY {self.columna_clave}"
+            ).fetchall()
         return tuple(self.desde_documento(json.loads(f["documento"])) for f in filas)

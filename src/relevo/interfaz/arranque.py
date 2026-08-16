@@ -22,20 +22,63 @@ from dataclasses import dataclass
 from datetime import date, datetime
 from pathlib import Path
 
+from relevo.aplicacion.acciones_receptor import AccionesReceptor
+from relevo.aplicacion.avanzar_aprendizaje import AvanzarAprendizaje
+from relevo.aplicacion.avanzar_ciclo import AvanzarCiclo
+from relevo.aplicacion.conciliar_medicacion import ConciliarMedicacion
 from relevo.aplicacion.digitalizar_documento import (
     CampoDigitalizado,
     ConfirmarDigitalizacion,
     DigitalizarDocumento,
 )
+from relevo.aplicacion.evaluar_corte_etario import EvaluarCorteEtario
+from relevo.aplicacion.gestionar_acceso_apoderado import GestionarAccesoApoderado
 from relevo.aplicacion.priorizar_cohorte import PriorizarCohorte
+from relevo.aplicacion.registrar_reingreso import RegistrarReingreso
 from relevo.aplicacion.revisar_corpus import RevisarCorpus, RevisarSubida
+from relevo.dominio.entidades.ciclo_transicion import CicloTransicion
+from relevo.dominio.entidades.destino import DirectorioDestinos
+from relevo.dominio.entidades.leccion import Leccion
+from relevo.dominio.entidades.progreso_aprendizaje import ProgresoAprendizaje
+from relevo.dominio.objetos_valor.habilidad import Habilidad
 from relevo.dominio.servicios.calculadora_iut import CalculadoraIUT
 from relevo.dominio.servicios.clasificador_cohorte import ClasificadorCohorte
 from relevo.dominio.entidades.paciente import Paciente
-from relevo.dominio.servicios.maquina_ciclo import PoliticaPlazos
+from relevo.dominio.servicios.maquina_ciclo import MaquinaCiclo, PoliticaPlazos
+from relevo.infraestructura.configuracion.cargador_destinos import (
+    cargar_directorio,
+)
+from relevo.infraestructura.configuracion.cargador_lecciones import (
+    cargar_lecciones,
+)
 from relevo.infraestructura.configuracion.cargador_yaml import (
     cargar_parametros_iut,
     cargar_politica_plazos,
+)
+from relevo.infraestructura.fuentes.cohorte_demo import construir_cohorte_demo
+from relevo.infraestructura.persistencia.auditoria import RegistroAuditoria
+from relevo.infraestructura.persistencia.mapeadores import (
+    acceso_a_documento,
+    acceso_desde_documento,
+    ciclo_a_documento,
+    ciclo_desde_documento,
+    conciliacion_a_documento,
+    conciliacion_desde_documento,
+    paciente_a_documento,
+    paciente_desde_documento,
+    progreso_a_documento,
+    progreso_desde_documento,
+)
+from relevo.infraestructura.persistencia.migraciones import (
+    InformeMigracion,
+    migrar,
+)
+from relevo.infraestructura.persistencia.repositorio_sqlite import (
+    ESQUEMA_VERSION,
+    BaseDatos,
+    RepositorioCiclosSQLite,
+    RepositorioDocumentos,
+    RepositorioPacientesSQLite,
 )
 from relevo.infraestructura.configuracion.catalogo_establecimientos import (
     Establecimiento,
@@ -154,6 +197,32 @@ class Contenedor:
     en cualquier momento despues. Se pregunta cada vez con `estado_lector()`.
     """
 
+    # ── Lo que llego con la fusion ───────────────────────────────────────────
+    bd: BaseDatos | None
+    """None cuando se arranca en memoria (tests). Con SQLite, el archivo."""
+
+    repo_pacientes: RepositorioPacientesSQLite | None
+    repo_ciclos: RepositorioCiclosSQLite | None
+    repo_progreso: RepositorioDocumentos | None
+    repo_conciliacion: RepositorioDocumentos | None
+    repo_acceso: RepositorioDocumentos | None
+    auditoria: RegistroAuditoria | None
+
+    directorio_destinos: DirectorioDestinos
+    lecciones: dict[Habilidad, Leccion]
+
+    avanzar_ciclo: AvanzarCiclo
+    acciones_receptor: AccionesReceptor
+    registrar_reingreso: RegistrarReingreso
+    evaluar_corte: EvaluarCorteEtario
+    avanzar_aprendizaje: AvanzarAprendizaje
+    conciliar: ConciliarMedicacion
+    acceso_apoderado: GestionarAccesoApoderado
+
+    @property
+    def es_persistente(self) -> bool:
+        return self.bd is not None
+
     def estado_lector(self, forzar: bool = False) -> EstadoLector:
         """Si hay modelo AHORA, y donde esta."""
         return self.lector.estado(forzar=forzar)
@@ -185,9 +254,184 @@ class Contenedor:
             clasificador=ClasificadorCohorte(),
         )
 
+    # ── Lectura de lo persistido ─────────────────────────────────────────────
+
+    def pacientes(self) -> tuple[Paciente, ...]:
+        """La cohorte guardada. Vacia si se arranco sin persistencia."""
+        if self.repo_pacientes is None:
+            return ()
+        return tuple(self.repo_pacientes.todos())
+
+    def paciente(self, paciente_id: str) -> Paciente | None:
+        if self.repo_pacientes is None:
+            return None
+        resultado = self.repo_pacientes.obtener(paciente_id)
+        return resultado if isinstance(resultado, Paciente) else None
+
+    def ciclos(self) -> tuple[CicloTransicion, ...]:
+        if self.repo_ciclos is None:
+            return ()
+        return tuple(self.repo_ciclos.todos())
+
+    def ciclo_de(self, paciente_id: str) -> CicloTransicion | None:
+        if self.repo_ciclos is None:
+            return None
+        encontrados = self.repo_ciclos.de_paciente(paciente_id)
+        return encontrados[0] if encontrados else None
+
+    def progreso_de(self, paciente_id: str) -> ProgresoAprendizaje:
+        """El recorrido de Entrenate. Uno vacio si el paciente no empezo.
+
+        Devuelve un progreso en cero en vez de None: las siete habilidades
+        existen siempre, y quien no empezo esta en `POR_INICIAR`, no en un
+        estado indefinido.
+        """
+        if self.repo_progreso is not None:
+            guardado = self.repo_progreso.obtener(paciente_id)
+            if isinstance(guardado, ProgresoAprendizaje):
+                return guardado
+        return ProgresoAprendizaje(paciente_id=paciente_id)
+
+    def guardar_ciclo(self, ciclo: CicloTransicion, actor: str = "sistema") -> None:
+        """Persiste el ciclo Y deja constancia en la cadena de auditoria.
+
+        Las dos cosas juntas y en un solo metodo a proposito: guardar sin
+        auditar es exactamente lo que hacia que la cadena de hash estuviera
+        construida y probada, y no la llamara nadie.
+        """
+        if self.repo_ciclos is None:
+            return
+        self.repo_ciclos.guardar(
+            ciclo,
+            indices={
+                "paciente_id": ciclo.paciente_id,
+                "estado": ciclo.estado.value,
+                "fecha_estado": ciclo.fecha_estado_actual.isoformat(),
+                "cerrado": ciclo.esta_cerrado,
+            },
+        )
+        if self.auditoria is not None:
+            self.auditoria.registrar(
+                actor=actor,
+                accion="avanzar_ciclo",
+                entidad="ciclo",
+                entidad_id=ciclo.paciente_id,
+                campo="estado",
+                valor_despues=ciclo.estado.value,
+                contexto={"responsable": ciclo.responsable.value},
+            )
+
+    def guardar_progreso(
+        self, progreso: ProgresoAprendizaje, actor: str = "paciente"
+    ) -> None:
+        if self.repo_progreso is None:
+            return
+        self.repo_progreso.guardar(
+            progreso.paciente_id,
+            progreso,
+            columnas_extra={"logradas": progreso.total_logradas},
+        )
+        if self.auditoria is not None:
+            self.auditoria.registrar(
+                actor=actor,
+                accion="avanzar_aprendizaje",
+                entidad="progreso_aprendizaje",
+                entidad_id=progreso.paciente_id,
+                valor_despues=progreso.resumen(),
+            )
+
+    def verificar_auditoria(self) -> tuple[bool, int | None]:
+        """(intacta, id de la primera fila rota). La respuesta a "¿quien vigila
+        al vigilante?": si alguien edita el SQLite por fuera, esto lo delata."""
+        if self.auditoria is None:
+            return True, None
+        return self.auditoria.verificar_cadena()
+
+    # ── Demo ─────────────────────────────────────────────────────────────────
+
+    def sembrar_demo(
+        self,
+        n_pacientes: int,
+        semilla_aleatoria: int,
+        hoy: date,
+        ciclos_abiertos: int,
+        reparto_estados: dict[str, int],
+        vencidos_forzados: int,
+    ) -> dict[str, int]:
+        """Genera y persiste la cohorte de demo. Determinista.
+
+        Misma `semilla_aleatoria` = misma cohorte, hasta el ultimo digito del
+        IUT. Eso es lo que hace que el ensayo del pitch sea reproducible: si
+        cada reinicio generara pacientes distintos, no se podria ensayar.
+
+        `vencidos_forzados` crea ciclos con la fecha atrasada a proposito, para
+        que `correr_noche` tenga siempre algo que avisar en la demo.
+
+        Los parametros se aceptan y se respetan, pero la forma de la cohorte
+        —el caso Hunter, el de contraste, el reparto por estados— vive en
+        `config/semilla_demo.yaml`: es contenido de demo, no codigo.
+        """
+        if self.repo_pacientes is None or self.repo_ciclos is None:
+            raise RuntimeError(
+                "No se puede sembrar sin persistencia. Construir el contenedor "
+                "con `persistente=True`."
+            )
+
+        pacientes, ciclos = construir_cohorte_demo(
+            hoy,
+            ajustes={
+                "pacientes": n_pacientes,
+                "semilla_aleatoria": semilla_aleatoria,
+                "ciclos_abiertos": ciclos_abiertos,
+                "reparto_estados_ciclo": reparto_estados or None,
+                "ciclos_vencidos_forzados": vencidos_forzados,
+            },
+        )
+        priorizador = PriorizarCohorte(
+            repositorio=RepositorioPacientesMemoria(pacientes),
+            calculadora=CalculadoraIUT(cargar_parametros_iut()),
+            clasificador=ClasificadorCohorte(),
+        )
+        prioridades = {
+            fila.paciente.id: fila for fila in priorizador.ejecutar(hoy).filas
+        }
+
+        for paciente in pacientes:
+            fila = prioridades.get(paciente.id)
+            indice = fila.indice if fila is not None else None
+            self.repo_pacientes.guardar(
+                paciente,
+                indices={
+                    "fecha_nacimiento": paciente.fecha_nacimiento.isoformat(),
+                    "cohorte": paciente.cohorte(hoy).value,
+                    # Sin estos indices el radar no puede ordenar por IUT, que
+                    # es lo unico que el radar hace.
+                    "iut": indice.valor if indice else None,
+                    "estado_semaforo": indice.estado.value if indice else None,
+                    "confianza": getattr(indice, "confianza", None),
+                    "tiene_contacto": paciente.tiene_contacto_vigente(hoy),
+                },
+            )
+
+        vencidos = 0
+        for ciclo in ciclos:
+            self.guardar_ciclo(ciclo, actor="semilla de demo")
+            evaluacion = MaquinaCiclo(self.politica_plazos).evaluar(ciclo, hoy)
+            if evaluacion.situacion.name == "VENCIDO":
+                vencidos += 1
+
+        return {
+            "pacientes": len(pacientes),
+            "ciclos": len(ciclos),
+            "vencidos": vencidos,
+        }
+
 
 def construir(
-    config: Path | None = None, host_ollama: str | None = None
+    config: Path | None = None,
+    host_ollama: str | None = None,
+    persistente: bool = True,
+    ruta_bd: Path | None = None,
 ) -> Contenedor:
     """Arma el sistema completo.
 
@@ -197,10 +441,58 @@ def construir(
     `host_ollama` redirige el lector a otra maquina. Si no se pasa, se lee de
     la variable de entorno `RELEVO_OLLAMA_HOST`, y en su defecto se usa el
     Ollama local. Ver `VARIABLE_HOST_OLLAMA`.
+
+    `persistente` decide memoria o SQLite. POR DEFECTO SQLITE: si la demo no
+    persiste, no es la demo de un sistema, es la demo de una pantalla. Se pone
+    en False solo en pruebas, donde tocar el disco haria los tests lentos y
+    dependientes entre si.
     """
     lector = LectorReconectable(host=_host_ollama(host_ollama))
     digitalizar = DigitalizarDocumento(lector=lector, extraer=_adaptar_campos)
     corpus = CorpusEnArchivos.descubrir(RAIZ_DATOS)
+    politica = cargar_politica_plazos()
+    maquina = MaquinaCiclo(politica)
+    lecciones = cargar_lecciones()
+
+    bd: BaseDatos | None = None
+    repo_pacientes: RepositorioPacientesSQLite | None = None
+    repo_ciclos: RepositorioCiclosSQLite | None = None
+    repo_progreso: RepositorioDocumentos | None = None
+    repo_conciliacion: RepositorioDocumentos | None = None
+    repo_acceso: RepositorioDocumentos | None = None
+    auditoria: RegistroAuditoria | None = None
+
+    if persistente:
+        bd = BaseDatos(ruta_bd or RAIZ_DATOS / "relevo.db")
+        # La migracion corre al arrancar y es idempotente. Nada se borra: los
+        # estados del modelo de seis se traducen a los de nueve.
+        migrar(bd, ESQUEMA_VERSION)
+        repo_pacientes = RepositorioPacientesSQLite(
+            bd, paciente_a_documento, paciente_desde_documento
+        )
+        repo_ciclos = RepositorioCiclosSQLite(
+            bd, ciclo_a_documento, ciclo_desde_documento
+        )
+        repo_progreso = RepositorioDocumentos(
+            bd,
+            tabla="progreso_aprendizaje",
+            a_documento=progreso_a_documento,
+            desde_documento=progreso_desde_documento,
+            columna_clave="paciente_id",
+        )
+        repo_conciliacion = RepositorioDocumentos(
+            bd,
+            tabla="conciliacion",
+            a_documento=conciliacion_a_documento,
+            desde_documento=conciliacion_desde_documento,
+        )
+        repo_acceso = RepositorioDocumentos(
+            bd,
+            tabla="acceso_apoderado",
+            a_documento=acceso_a_documento,
+            desde_documento=acceso_desde_documento,
+        )
+        auditoria = RegistroAuditoria(bd)
 
     return Contenedor(
         digitalizar=digitalizar,
@@ -208,6 +500,32 @@ def construir(
         revisar_corpus=RevisarCorpus(corpus=corpus, digitalizar=digitalizar),
         revisar_subida=RevisarSubida(digitalizar=digitalizar),
         corpus=corpus,
-        politica_plazos=cargar_politica_plazos(),
+        politica_plazos=politica,
         lector=lector,
+        bd=bd,
+        repo_pacientes=repo_pacientes,
+        repo_ciclos=repo_ciclos,
+        repo_progreso=repo_progreso,
+        repo_conciliacion=repo_conciliacion,
+        repo_acceso=repo_acceso,
+        auditoria=auditoria,
+        directorio_destinos=cargar_directorio(),
+        lecciones=lecciones,
+        avanzar_ciclo=AvanzarCiclo(maquina=maquina),
+        acciones_receptor=AccionesReceptor.con_maquina(maquina),
+        registrar_reingreso=RegistrarReingreso.con_maquina(maquina),
+        evaluar_corte=EvaluarCorteEtario(),
+        avanzar_aprendizaje=AvanzarAprendizaje(catalogo=lecciones),
+        conciliar=ConciliarMedicacion(),
+        acceso_apoderado=GestionarAccesoApoderado(),
     )
+
+
+def informe_de_migracion(bd: BaseDatos) -> InformeMigracion:
+    """Vuelve a correr la migracion para poder mostrar que hizo.
+
+    Es idempotente, asi que llamarla despues de `construir` no cambia nada: solo
+    informa. Existe porque una migracion silenciosa es indistinguible de una
+    que no corrio.
+    """
+    return migrar(bd, ESQUEMA_VERSION)

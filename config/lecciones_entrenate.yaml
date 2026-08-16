@@ -1,0 +1,287 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Entrenate — contenido de las siete lecciones
+#
+# CONTENIDO, NO CODIGO. Vive aqui por el mismo motivo que los plazos y los
+# betas del indice: es material que un profesional del INSN tiene que poder
+# leer, discutir y corregir sin abrir un editor de codigo.
+#
+# NOTA DE VOCABULARIO: se llaman LECCIONES, nunca "modulos". En software esa
+# palabra significa otra cosa y ya causo confusion en el equipo.
+#
+# ═════════════════════════════════════════════════════════════════════════════
+# UNA COMPLETA, SEIS ESQUELETOS — y por que
+# ═════════════════════════════════════════════════════════════════════════════
+#
+# La leccion 6, "Que cambia cuando cumplo 18", esta completa. Se eligio esa y
+# no "Mi condicion" por cuatro razones que se apilan:
+#
+#   (a) es la unica de las siete que habla del acantilado legal que le da
+#       nombre al reto;
+#   (b) es contenido JURIDICO Y ADMINISTRATIVO, no clinico, asi que el equipo
+#       puede escribir y defender cada frase sin la firma de un medico
+#       (regla inviolable 4);
+#   (c) tiene carga emocional real: el adolescente descubre que su madre ya no
+#       puede pedir sus resultados y que ahora decide el;
+#   (d) es la unica cuyo contenido se conecta con un mecanismo que ya
+#       construimos — la compuerta de consentimiento del apoderado, en
+#       `dominio/entidades/acceso_apoderado.py`. Contenido y codigo cuentan la
+#       misma historia.
+#
+# Las otras seis van en esqueleto, con el sello visible "Contenido pendiente
+# de validacion clinica del INSN". No se inventa contenido clinico: un
+# esqueleto honesto es mas fuerte ante un jurado clinico que siete lecciones
+# que nadie del equipo puede defender.
+#
+# Si durante la hackathon un medico del INSN valida contenido, la leccion 1
+# puede completarse tambien. Es ganancia extra, no requisito.
+# ─────────────────────────────────────────────────────────────────────────────
+
+version: "0.1.0"
+fecha_revision: "2026-08-16"
+
+lecciones:
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  - numero: 1
+    habilidad: conozco_mi_condicion
+    titulo: "Que tengo y como se llama"
+    objetivo: >-
+      Se decir el nombre de mi condicion, desde cuando la tengo y que parte de
+      mi cuerpo afecta, sin mirar ningun papel.
+    estado_contenido: esqueleto_pendiente_validacion
+    pasos:
+      aprender: ""
+      practicar: ""
+      desafio: ""
+      tarea_real: ""
+      retroalimentacion: ""
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  - numero: 2
+    habilidad: manejo_mi_tratamiento
+    titulo: "Mi tratamiento es mio"
+    objetivo: >-
+      Se que tomo, para que sirve, cada cuanto, y que hago si se me olvida una
+      dosis o se me acaba.
+    estado_contenido: esqueleto_pendiente_validacion
+    pasos:
+      aprender: ""
+      practicar: ""
+      desafio: ""
+      tarea_real: ""
+      retroalimentacion: ""
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  - numero: 3
+    habilidad: hablo_con_mi_equipo
+    titulo: "Hablar yo, no que hablen por mi"
+    objetivo: >-
+      Puedo contarle a un medico que me pasa y hacerle preguntas sin que
+      responda otra persona por mi.
+    estado_contenido: esqueleto_pendiente_validacion
+    # Esta leccion responde a la segunda cita de paciente del propio INSN:
+    # "Cuando fui al medico del servicio para adultos, no sabia como responder
+    # a sus preguntas porque mi mama siempre lo hacia por mi."
+    pasos:
+      aprender: ""
+      practicar: ""
+      desafio: ""
+      tarea_real: ""
+      retroalimentacion: ""
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  - numero: 4
+    habilidad: navego_el_sistema
+    titulo: "Como pido una cita"
+    objetivo: >-
+      Se pedir una cita, se a donde ir, y se que hacer si me la niegan o si el
+      sistema me manda a otro sitio.
+    estado_contenido: esqueleto_pendiente_validacion
+    pasos:
+      aprender: ""
+      practicar: ""
+      desafio: ""
+      tarea_real: ""
+      retroalimentacion: ""
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  - numero: 5
+    habilidad: cuido_mis_documentos
+    titulo: "Mis papeles los guardo yo"
+    objetivo: >-
+      Se cuales son mis documentos de salud, donde los tengo, y cuales tengo
+      que llevar a una consulta.
+    estado_contenido: esqueleto_pendiente_validacion
+    pasos:
+      aprender: ""
+      practicar: ""
+      desafio: ""
+      tarea_real: ""
+      retroalimentacion: ""
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # LA COMPLETA
+  # ═══════════════════════════════════════════════════════════════════════════
+  - numero: 6
+    habilidad: conozco_mis_derechos
+    titulo: "Que cambia cuando cumplo 18"
+    objetivo: >-
+      Se que decisiones sobre mi salud pasan a ser mias el dia que cumplo 18,
+      quien puede y quien no puede ver mi informacion, y que tengo que hacer
+      antes de esa fecha.
+    estado_contenido: completo
+
+    pasos:
+      aprender: |
+        El dia que cumples 18 anios, tres cosas cambian a la vez. No cambian
+        poco a poco: cambian ese dia.
+
+        **1. Las decisiones sobre tu salud pasan a ser tuyas.**
+        Hasta los 18, tus padres o tu tutor deciden por ti y firman por ti.
+        Desde el dia de tu cumpleanos, adquieres capacidad de ejercicio: eres
+        tu quien firma un consentimiento antes de un procedimiento, y eres tu
+        quien puede negarse. Nadie puede hacerlo en tu nombre salvo que tu lo
+        autorices.
+
+        **2. Tu informacion de salud deja de ser accesible para tu familia.**
+        Esto sorprende a casi todo el mundo. Tus datos de salud son datos
+        sensibles y son tuyos. Tu madre, que lleva anos pidiendo tus
+        resultados y hablando con tus medicos, deja de poder hacerlo
+        automaticamente. Puede seguir haciendolo solo si tu lo autorizas
+        expresamente, y puedes retirar esa autorizacion cuando quieras.
+
+        Esto no es un castigo para tu familia. Es el reconocimiento de que la
+        informacion es tuya, y de que a partir de ahora decides tu quien la ve.
+
+        **3. Dejas de poder atenderte en el INSN.**
+        El Instituto Nacional de Salud del Nino no atiende a mayores de 18
+        anios. No es una demora ni una lista de espera: es un corte, en fecha
+        exacta. Por eso existe todo lo que estas viendo en esta aplicacion —
+        para que el dia que eso pase, tu ya tengas otro hospital que te espere.
+
+        **Y una cosa que NO sabemos todavia, y preferimos decirtelo:**
+        que pasa exactamente con tu SIS al cumplir 18 anios. Hay reglas
+        distintas segun el regimen y estamos confirmandolo con el Servicio
+        Social del INSN. Cuando lo sepamos con certeza, esta leccion se
+        actualiza. Preguntalo tu tambien en tu proxima consulta: es de las
+        cosas mas importantes que tienes que tener resueltas antes de tu
+        cumpleanos.
+
+      practicar: |
+        Responde para ti mismo, sin buscar:
+
+        1. Si manana cumplieras 18 y tuvieras que firmar un consentimiento
+           para un procedimiento, ¿quien firmaria? ¿Sabrias que estas
+           firmando?
+
+        2. ¿Quieres que tu madre, tu padre o alguien mas pueda seguir viendo
+           tu informacion de salud despues de los 18? No hay respuesta
+           correcta. Hay gente que si y gente que no, y las dos son validas.
+
+        3. Si dijeras que si, ¿toda tu informacion, o solo saber como va tu
+           tramite de traspaso? Tambien puedes autorizar solo una parte.
+
+        4. ¿Sabes en que hospital te vas a atender despues? ¿Y sabes si ya te
+           aceptaron?
+
+      desafio: |
+        Un caso, para pensarlo:
+
+        > Carla cumplio 18 hace dos meses. Su mama llama al hospital para
+        > pedir el resultado de un examen, como ha hecho siempre. Le dicen que
+        > no se lo pueden dar.
+        >
+        > La mama se enfada. Dice que es su hija y que siempre se lo han dado.
+
+        ¿Quien tiene razon?
+
+        **El hospital.** Y no por burocracia: los datos de salud de Carla son
+        datos sensibles suyos, y desde que cumplio 18 solo ella decide quien
+        los ve. Si Carla quiere que su mama pueda pedirlos, basta con que lo
+        autorice — y puede hacerlo hoy mismo, o retirarlo el mes que viene.
+
+        Lo que salio mal aqui no es la regla. Es que nadie se lo dijo a Carla
+        ni a su mama antes de que ocurriera. Por eso estas leyendo esto ahora
+        y no dentro de dos anios.
+
+      tarea_real: |
+        **Esta semana, dos cosas. Las dos fuera de la pantalla.**
+
+        **Una:** habla con tu madre, tu padre o quien te acompane a las
+        consultas. Cuentale lo que acabas de leer. Decidid juntos si quieres
+        autorizarle el acceso a tu informacion cuando cumplas 18, y a que
+        parte. No hace falta que lo decidas hoy — hace falta que la
+        conversacion ocurra antes de tu cumpleanos y no el dia despues.
+
+        Si decides autorizarlo, puedes dejarlo registrado en esta aplicacion
+        desde ahora: queda preparado y empieza a valer el dia del corte.
+
+        **Dos:** en tu proxima consulta, pregunta dos cosas concretas:
+        · "¿Que pasa con mi SIS cuando cumpla 18?"
+        · "¿En que hospital me voy a atender despues, y ya me aceptaron?"
+
+        Anota las respuestas. Si te dicen que no lo saben, eso tambien es una
+        respuesta y hay que anotarla.
+
+      retroalimentacion: |
+        Cuando hayas hecho las dos tareas, vuelve y marca esta habilidad como
+        lograda.
+
+        Y si la conversacion con tu familia fue dificil, o si en la consulta no
+        supieron responderte, escribelo tambien. Lo segundo sobre todo: si el
+        equipo del INSN no puede responder a esas dos preguntas, ese es un
+        hallazgo del sistema, no un fallo tuyo.
+
+    # Cada afirmacion con su fuente, VISIBLE PARA EL USUARIO. Una leccion que
+    # le dice a un adolescente que su madre ya no puede pedir sus resultados
+    # tiene que poder decirle tambien en que norma esta escrito, o es
+    # indistinguible de un rumor.
+    fuentes:
+      - afirmacion: "A los 18 anios adquieres capacidad de ejercicio y decides sobre tu salud"
+        norma: "Codigo Civil peruano, art. 42"
+        detalle: >-
+          La capacidad de ejercicio plena se adquiere a los dieciocho anios.
+          Antes de esa edad, la patria potestad (arts. 418 y ss.) atribuye a
+          los padres el deber y el derecho de cuidar de la persona del menor.
+
+      - afirmacion: "Tus datos de salud son datos sensibles y son tuyos"
+        norma: "Ley 29733 de Proteccion de Datos Personales, art. 2.5"
+        detalle: >-
+          Los datos relativos a la salud son datos sensibles. Su tratamiento
+          exige consentimiento previo, informado, expreso e inequivoco del
+          titular.
+
+      - afirmacion: "El consentimiento informado sobre tu tratamiento pasa a ser tuyo"
+        norma: "Ley 26842, Ley General de Salud, art. 4"
+        detalle: >-
+          Ninguna persona puede ser sometida a tratamiento medico o quirurgico
+          sin su consentimiento previo.
+
+      - afirmacion: "El INSN no atiende a mayores de 18 anios"
+        norma: "Regla institucional del INSN San Borja"
+        detalle: >-
+          Confirmada por el equipo de la Unidad de Atencion Integral
+          Especializada. El corte es duro y en fecha exacta.
+
+      - afirmacion: "Que pasa con el SIS al cumplir 18 — PENDIENTE DE CONFIRMAR"
+        norma: "TODO: confirmar con Servicio Social del INSN"
+        detalle: >-
+          No lo afirmamos porque no lo hemos verificado. Lo que si esta
+          verificado es el caso de EsSalud: los hijos dejan de ser
+          derechohabientes a los 18 salvo que acrediten incapacidad total y
+          permanente ante la Comision Medica Evaluadora (Ley 26790).
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  - numero: 7
+    habilidad: entiendo_la_transicion
+    titulo: "A donde voy despues"
+    objetivo: >-
+      Entiendo que es el traspaso a un hospital de adultos, en que punto va el
+      mio, y que tengo que hacer yo en cada etapa.
+    estado_contenido: esqueleto_pendiente_validacion
+    pasos:
+      aprender: ""
+      practicar: ""
+      desafio: ""
+      tarea_real: ""
+      retroalimentacion: ""

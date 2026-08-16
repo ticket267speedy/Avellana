@@ -1,0 +1,213 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Semilla de la cohorte de demostracion
+#
+# REGLA 1, SIN EXCEPCIONES: todo lo de aqui es SINTETICO. Ningun dato
+# corresponde a una persona real. `data/` no se versiona nunca.
+#
+# Misma `semilla_aleatoria` = misma cohorte, hasta el ultimo digito del IUT.
+# Eso es lo que hace que el ensayo del pitch sea reproducible: si cada reinicio
+# generara pacientes distintos, no se podria ensayar.
+# ─────────────────────────────────────────────────────────────────────────────
+
+version: 2
+es_demo: true
+semilla_aleatoria: 20260816
+fecha_referencia: "2026-08-16"
+
+# 42 = 2 casos con nombre + 40 de fondo.
+pacientes: 42
+ciclos_abiertos: 18
+ciclos_vencidos_forzados: 3
+
+# Reparto de los ciclos abiertos entre los estados del modelo de nueve.
+# Se carga la mitad izquierda del recorrido a proposito: es donde vive el
+# problema, y una demo con todos los ciclos ya aceptados no muestra nada.
+reparto_estados_ciclo:
+  PREPARACION: 5
+  REFERENCIA_ENVIADA: 3
+  RECEPCION_CONFIRMADA: 3
+  EN_EVALUACION: 3
+  ACEPTADO_CON_SERVICIO: 2
+  CITA_PROGRAMADA: 1
+  PERDIDA_DE_SEGUIMIENTO: 1
+
+nota: >-
+  Cohorte sintetica reproducible. Ningun dato corresponde a una persona real.
+  Misma semilla_aleatoria = misma cohorte, hasta el ultimo digito del IUT.
+
+# ═════════════════════════════════════════════════════════════════════════════
+# CASO PROTAGONISTA — Sindrome de Hunter
+#
+# POR QUE HUNTER Y NO ASMA
+# La mucopolisacaridosis tipo II es una enfermedad rara. Su punto no es que sea
+# grave —lo es— sino que **no existe un servicio de adultos equivalente al que
+# derivarlo en el pais**. La demo muestra entonces algo que ningun otro equipo
+# va a poder mostrar: que el sistema NO PUEDE INVENTAR un servicio que no
+# existe, y que en cambio produce la evidencia de que falta.
+#
+# El propio INSN lo escribio en su rubrica: "La falta de datos tambien es un
+# hallazgo: si una institucion no cuenta con la informacion necesaria, se
+# evidencia una brecha estructural."
+#
+# UN UNICO VALOR DE EDAD en todos los documentos, codigo y diapositivas:
+# 17 anios y 4 meses a la fecha de referencia (2026-08-16).
+# ═════════════════════════════════════════════════════════════════════════════
+caso_protagonista:
+  id: "DEMO-0001"
+  nombre_demo: "Mateo Silva Quispe"
+  fecha_nacimiento: "2009-04-16"   # 17 anios y 4 meses el 2026-08-16
+  sexo: "M"
+  procedencia: "Junin"
+  tipo_seguro: "SIS"
+
+  diagnosticos:
+    - codigo: "E76.1"
+      descripcion: "Mucopolisacaridosis tipo II (Sindrome de Hunter)"
+      categoria: "metabolica"
+      principal: true
+      raro: true
+    - codigo: "J45.9"
+      descripcion: "Asma no especificada"
+      categoria: "respiratoria"
+      principal: false
+      raro: false
+    - codigo: "H90.3"
+      descripcion: "Hipoacusia neurosensorial bilateral"
+      categoria: "otra"
+      principal: false
+      raro: false
+
+  medicamentos:
+    # ═══════════════════════════════════════════════════════════════════════
+    # REGLA 8 — NO SE INVENTA LA DOSIS
+    #
+    # La idursulfasa se administra por infusion intravenosa semanal. Eso es
+    # publico y verificable. La DOSIS no la escribimos: sale como hueco en el
+    # Pasaporte, que es como el sistema representa un dato que un medico tiene
+    # que llenar. Un hueco visible obliga a llenarlo; una dosis plausible pero
+    # inventada no obliga a nada.
+    #
+    # TODO: confirmar con mentor — dosis de idursulfasa del protocolo del INSN.
+    # ═══════════════════════════════════════════════════════════════════════
+    - nombre: "Idursulfasa"
+      dosis: null
+      via: "intravenosa"
+      frecuencia: "semanal"
+      verificada_en_fuente: false
+      origen: "SINTETICO_DEMO"
+    - nombre: "Salbutamol inhalador"
+      dosis: "100 mcg"
+      via: "inhalatoria"
+      frecuencia: "a demanda"
+      verificada_en_fuente: true
+      origen: "SINTETICO_DEMO"
+
+  dispositivos:
+    - tipo: "audifono"
+      descripcion: "Audifono bilateral"
+
+  alergias: []
+
+  cirugias:
+    - nombre: "Adenoamigdalectomia"
+      fecha: "2016-09-08"
+      institucion: "INSTITUTO NACIONAL DE SALUD NIÑO SAN BORJA"
+
+  contactos:
+    - nombre: "Rosa Quispe"
+      tipo: "madre"
+      telefono: "987112233"
+      verificado_en: "2025-11-04"
+    - nombre: "Mateo Silva Quispe"
+      tipo: "paciente"
+      telefono: "912445566"
+      verificado_en: "2026-06-20"
+
+  traq:
+    puntaje: 2.4
+    fecha: "2026-05-12"
+
+  ultima_consulta: "2026-06-20"
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # EL PUNTO DE ELEGIR HUNTER
+  #
+  # `es_brecha_de_oferta` significa que esto NO se arregla llenando el
+  # directorio: se arregla con politica publica. Contarlo es exactamente para
+  # lo que sirve el modulo de destinos.
+  # ═══════════════════════════════════════════════════════════════════════════
+  destino:
+    tipo: "sin_destino_identificado"
+    # El enum del dominio lo llama NO_EXISTE_SERVICIO_ADULTO; es el mismo
+    # motivo que las instrucciones de fusion nombran
+    # NO_EXISTE_SERVICIO_ADULTO_EQUIVALENTE.
+    motivo: "NO_EXISTE_SERVICIO_ADULTO"
+    es_brecha_de_oferta: true
+    detalle: >-
+      No hay servicio de enfermedades metabolicas del adulto que reciba
+      mucopolisacaridosis tipo II. TODO: confirmar con mentor.
+
+  ciclo:
+    estado: "EN_EVALUACION"
+    dias_en_estado: 46
+    establecimiento_receptor: "HOSPITAL NACIONAL  DOS DE MAYO"
+
+# ═════════════════════════════════════════════════════════════════════════════
+# CASO DE CONTRASTE — el que SI tiene destino
+#
+# Existe para que en el radar se vea la diferencia lado a lado: mismo sistema,
+# dos pacientes, uno con destino y otro sin el. Sin este caso, "sin destino
+# identificado" parece un fallo del software y no un hallazgo del sistema de
+# salud.
+# ═════════════════════════════════════════════════════════════════════════════
+caso_contraste:
+  id: "DEMO-0002"
+  nombre_demo: "Lucia Ramos Ttito"
+  fecha_nacimiento: "2009-01-20"
+  sexo: "F"
+  procedencia: "Lima"
+  tipo_seguro: "SIS"
+
+  diagnosticos:
+    - codigo: "J45.5"
+      descripcion: "Asma persistente grave"
+      categoria: "respiratoria"
+      principal: true
+      raro: false
+
+  medicamentos:
+    - nombre: "Budesonida/Formoterol"
+      dosis: "160/4.5 mcg"
+      via: "inhalatoria"
+      frecuencia: "cada 12 h"
+      verificada_en_fuente: true
+      origen: "SINTETICO_DEMO"
+
+  dispositivos: []
+  alergias: ["Acaros del polvo"]
+  cirugias: []
+
+  contactos:
+    - nombre: "Lucia Ramos Ttito"
+      tipo: "paciente"
+      telefono: "998877665"
+      verificado_en: "2026-07-30"
+
+  traq:
+    puntaje: 4.1
+    fecha: "2026-07-30"
+
+  ultima_consulta: "2026-07-30"
+
+  destino:
+    tipo: "destino"
+    especialidad: "Neumologia"
+    detalle: >-
+      El asma persistente si tiene servicio de adultos equivalente. La
+      diferencia con el caso protagonista es el hallazgo, no el software.
+
+  ciclo:
+    estado: "ACEPTADO_CON_SERVICIO"
+    dias_en_estado: 20
+    establecimiento_receptor: "HOSPITAL NACIONAL  DOS DE MAYO"
+    servicio_asignado: "Neumologia — consultorio 4"
