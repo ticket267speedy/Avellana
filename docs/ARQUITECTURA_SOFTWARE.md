@@ -113,6 +113,12 @@ El proyecto tiene límites explícitos:
 - WhatsApp y correo no llevan diagnósticos, dosis ni resultados
 - la salida final debe ser firmada por el profesional
 
+### 8.1 Simulación de separación por red y rol
+
+En este MVP la diferencia entre el entorno del INSN y los accesos del paciente, apoderado y médico receptor se implementa como una simulación visual y funcional de segmentación. El objetivo es mostrar, en la demo, que el admin y el médico del INSN comparten un contexto interno y que los demás actores operan en accesos distintos, con experiencias de interfaz separadas.
+
+Esto no es una LAN real, ni una VLAN, ni una separación de red de producción. Es una representación deliberada para la navegación y la lógica de acceso por rol. La comprobación de seguridad, el aislamiento real y la política de red se resolverían fuera del MVP con infraestructura de red, autenticación, proxy inverso y control de acceso.
+
 ## 9. Cómo se mantiene la claridad técnica
 
 - la lógica clínica vive en el dominio

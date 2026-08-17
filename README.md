@@ -8,6 +8,12 @@ Detectar pacientes crónicos, raros o complejos que se acercan a los 18 años, p
 
 La regla de negocio central es dura: el INSN no atiende mayores de 18 años bajo ninguna circunstancia. El corte es exacto y total.
 
+## Simulación de segmentación por rol y red
+
+Para la demo y la presentación del MVP, la separación entre el equipo del INSN y los actores externos se modela como una simulación visual y funcional: el admin y el médico del INSN comparten un entorno interno, mientras que el paciente, el apoderado y el médico receptor se exponen a través de URLs, rutas o accesos diferenciados, con experiencia de usuario distinta.
+
+Esto no debe interpretarse como aislamiento de red real ni como VLAN/LAN verdadera. El objetivo es evidenciar, en la demostración, que existe una frontera funcional de acceso por rol y contexto operativo, sin que eso implique un despliegue de infraestructura de red real. En producción, esa separación se resolvería con segmentación real de red, autenticación por rol, proxies inversos y políticas de acceso.
+
 ## Arquitectura hexagonal
 
 El proyecto sigue una arquitectura hexagonal con capas internas y externas:
